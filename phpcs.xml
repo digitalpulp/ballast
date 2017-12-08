@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<ruleset name="DP Standard">
+  <description>We use this file to customize options so that phpcs can be run without arguments.</description>
+  <config name="installed_paths" value="vendor/drupal/coder/coder_sniffer"/>
+  <!-- Uncomment this line to allow "Warning" level issues into the codebase.
+  <config name="ignore_warnings_on_exit" value="1"/>
+  -->
+  <!--If no files are specified when phpcs is called, scan the docroot-->
+  <file>./docroot</file>
+  <!--We don't sniff local settings-->
+  <exclude-pattern>*/settings\.local</exclude-pattern>
+  <!--We are not going to sniff core files-->
+  <exclude-pattern>*/docroot/core/*</exclude-pattern>
+  <exclude-pattern>*/*default\.settings</exclude-pattern>
+  <exclude-pattern>*/*example\.sites</exclude-pattern>
+  <exclude-pattern>*/*example\.settings</exclude-pattern>
+  <!--Nor will we sniff contrib modules, libraries or themes-->
+  <exclude-pattern>*/modules/contrib/*</exclude-pattern>
+  <exclude-pattern>*/themes/contrib/*</exclude-pattern>
+  <exclude-pattern>*/libraries/*</exclude-pattern>
+  <!--Don't sniff the files directory-->
+  <exclude-pattern >*/sites/*/files/*</exclude-pattern>
+  <!--Exclude the aliases file as it is often just copied from Acquia-->
+  <exclude-pattern>*/sites/*/*.aliases.drushrc.php</exclude-pattern>
+  <exclude-pattern>*/drush/aliases/*</exclude-pattern>
+  <exclude-pattern>*/drush/drushrc.php</exclude-pattern>
+  <!--Exclude the acquia-utils directory as it is also often just copied from Acquia-->
+  <exclude-pattern>*/acquia-utils/*</exclude-pattern>
+  <!--Exclude various files in custom themes-->
+  <exclude-pattern>*/themes/custom/*/node_modules/*</exclude-pattern>
+  <exclude-pattern>*/themes/custom/*/js/*/*.min.js</exclude-pattern>
+  <exclude-pattern>*/themes/custom/*/bower_components/*</exclude-pattern>
+  <!--Exclude CSS compiled in the theme-->
+  <exclude-pattern>*/themes/custom/*/css/*</exclude-pattern>
+  <!--Exclude external libraries added by composer in the repo root-->
+  <!--which don't get sniffed by default but could be in the list of files from-->
+  <!--a git commit.-->
+  <exclude-pattern>*/vendor/*</exclude-pattern>
+  <!--Be sure to include all the variants of Drupal files-->
+  <arg name="extensions" value="php,module,inc,install,profile,theme,js,css,yml,txt,md"/>
+  <arg name="report-full"/>
+
+  <rule ref="vendor/drupal/coder/coder_sniffer/Drupal"/>
+  <rule ref="Generic.CodeAnalysis.EmptyStatement"/>
+  <rule ref="Generic.CodeAnalysis.JumbledIncrementer"/>
+  <rule ref="Generic.CodeAnalysis.UnconditionalIfStatement"/>
+  <rule ref="Generic.CodeAnalysis.UselessOverridingMethod"/>
+  <rule ref="Generic.CodeAnalysis.ForLoopShouldBeWhileLoop">
+    <type>warning</type>
+  </rule>
+  <rule ref="Generic.CodeAnalysis.ForLoopWithTestFunctionCall">
+    <type>warning</type>
+  </rule>
+  <rule ref="Generic.CodeAnalysis.UnnecessaryFinalModifier">
+    <type>warning</type>
+  </rule>
+  <rule ref="vendor/drupal/coder/coder_sniffer/DrupalPractice">
+    <type>warning</type>
+  </rule>
+  <!-- There are some sniffs that fire on the distributed settings.php and we will not reformat core provided code -->
+  <rule ref="Drupal.Commenting.FileComment.Missing">
+    <exclude-pattern>*/default/settings*</exclude-pattern>
+  </rule>
+  <rule ref="Drupal.Commenting.DocComment.ShortFullStop">
+    <exclude-pattern>*/default/settings*</exclude-pattern>
+  </rule>
+  <rule ref="Drupal.Commenting.InlineComment.WrongStyle">
+    <exclude-pattern>*/default/settings*</exclude-pattern>
+  </rule>
+  <rule ref="Drupal.WhiteSpace.ScopeIndent.IncorrectExact">
+    <exclude-pattern>*/default/settings*</exclude-pattern>
+  </rule>
+  <rule ref="Drupal.Files.LineLength.TooLong">
+    <exclude-pattern>*/default/settings*</exclude-pattern>
+  </rule>
+  <rule ref="Drupal.Commenting.DocComment.ShortSingleLine">
+    <exclude-pattern>*/default/settings*</exclude-pattern>
+  </rule>
+  <rule ref="Drupal.Commenting.DocComment.TagsNotGrouped">
+    <exclude-pattern>*/default/settings*</exclude-pattern>
+  </rule>
+  <rule ref="DrupalPractice.CodeAnalysis.VariableAnalysis.UndefinedVariable">
+    <exclude-pattern>*/default/settings*</exclude-pattern>
+  </rule>
+</ruleset>

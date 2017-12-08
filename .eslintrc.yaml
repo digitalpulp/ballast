@@ -1,0 +1,11 @@
+---
+  extends: "./docroot/core/.eslintrc.json"
+#  Add any dynamically loaded library objects here that should be treated
+# as globally defined by eslint. Example:
+#  Swiper: false
+#  globals:
+#    PackageName: false
+  rules:
+    camelcase:
+    - 2
+    - properties: "always"

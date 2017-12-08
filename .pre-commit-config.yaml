@@ -1,0 +1,28 @@
+# Pre-commit
+# @see http://pre-commit.com/
+- repo: https://github.com/pre-commit/pre-commit-hooks.git
+  sha: v0.9.3
+  hooks:
+  - id: check-yaml
+    files: \.(yaml|yml)$
+    stages: [commit, push]
+    exclude: ^(vendor/|docroot/core/|docroot/vendor/|docroot/sites/default/default|docroot/sites/default/example|docroot/modules/contrib/|docroot/themes/contrib/|docroot/sites/\w+/files/|docroot/themes/custom/\w+/node_modules/|docroot/themes/custom/\w+/libraries/)
+# @see http://code.hootsuite.com/using-yelps-pre-commit-hooks/
+- repo: https://github.com/digitalpulp/pre-commit-php.git
+  sha: 1.3.0
+  hooks:
+  - id: php-lint-all
+    files: \.(php|module|inc|install|profile|theme)$
+    stages: [commit, push]
+    exclude: ^(vendor/|docroot/core/|docroot/vendor/|docroot/libraries/|docroot/sites/default/default|docroot/sites/default/example|docroot/modules/contrib/|docroot/themes/contrib/|docroot/sites/\w+/files/|docroot/themes/custom/\w+/node_modules/|docroot/themes/custom/\w+/libraries/|docroot/themes/custom/\w+/js/\w\.min.js/)
+  - id: php-cs
+    stages: [commit, push]
+    files: \.(php|module|inc|install|profile|theme)$
+    args: [--standard=./phpcs.xml]
+- repo: git://github.com/pre-commit/mirrors-eslint
+  sha: v4.6.1
+  hooks:
+  - id: eslint
+    exclude: ^(acquia-utils|vendor/|docroot/core/|docroot/vendor/|docroot/libraries/|docroot/sites/default/default|docroot/sites/default/example|docroot/libraries/|docroot/modules/contrib/|docroot/modules/custom/\w+/js/\w+\.min\.js|docroot/themes/contrib/|docroot/sites/\w+/files/|docroot/themes/custom/\w+/node_modules/|docroot/themes/custom/\w+/libraries/|docroot/themes/custom/\w+/js/\w+\.min\.js|docroot/themes/custom/\w+/Gruntfile\.js|ansible/roles/xhprof)
+    stages: [commit, push]
+

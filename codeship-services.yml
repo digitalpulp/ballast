@@ -1,0 +1,21 @@
+code-quality:
+  image: digitalpulp/code-quality
+  working_dir: /var/www
+  volumes_from:
+      - deploy
+front-end:
+  image: digitalpulp/front-end:codeship
+  working_dir: /var/www/docroot/themes/custom/YOUR_THEME
+  volumes_from:
+    - deploy
+  environment:
+    THEME_NAME: CHANGE_ME
+deploy:
+  image: digitalpulp/cli:codeship
+  working_dir: /var/www
+  encrypted_env_file: env.encrypted
+  volumes:
+    - .:/var/www
+  environment:
+    DEPLOY_TARGET: CHANGE_ME
+

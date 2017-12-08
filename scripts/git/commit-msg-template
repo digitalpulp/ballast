@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# This file is copied to .git/hooks/commit-msg on composer install
+#----------------------------------#
+if grep -E -q '{key}-\d+:?\s' $1; then
+    exit 0
+fi
+echo "Your commit message should contain a proper JIRA issue key.  The proper pattern is {key}-ddd or {key}-ddd: followed by whitespace." >&2
+exit 1
