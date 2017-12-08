@@ -1,12 +1,16 @@
 {
-    "name": "drupal-composer/drupal-project",
-    "description": "Project template for Drupal 8 projects with composer",
+    "name": "digitalpulp/ballast-drupal",
+    "description": "A local development toolset for automating Docker setup and Drupal development.",
     "type": "project",
     "license": "GPL-2.0+",
     "authors": [
         {
-            "name": "",
-            "role": ""
+            "name": "Shawn Duncan",
+            "role": "Project Lead"
+        },
+        {
+          "name": "Nick Main",
+          "role": "Developer"
         }
     ],
     "repositories": [
