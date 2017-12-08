@@ -309,9 +309,9 @@ extra section of composer.json:
 ## Appreciation
 We are grateful for the following open source projects that made this project possible!
 
-[Drupal](https://www.drupal.org/)
-[Drupal Composer Project](https://github.com/drupal-composer/drupal-project)
-[Drupal Docker](http://www.drupaldocker.org/)
-[Composer](https://getcomposer.org)
-[Robo](http://robo.li/)
-[Ahoy](http://www.ahoycli.com/en/latest/)
+- [Drupal](https://www.drupal.org/)
+- [Drupal Composer Project](https://github.com/drupal-composer/drupal-project)
+- [Drupal Docker](http://www.drupaldocker.org/)
+- [Composer](https://getcomposer.org)
+- [Robo](http://robo.li/)
+- [Ahoy](http://www.ahoycli.com/en/latest/)
