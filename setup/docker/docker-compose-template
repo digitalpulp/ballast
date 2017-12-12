@@ -41,7 +41,7 @@ services:
       - internal
       - proxy
   front-end:
-    image: digitalpulp/front-end:1.0.8
+    image: digitalpulp/front-end:1.0.10
     environment:
       THEME_NAME: {site_theme_name}
     depends_on:
