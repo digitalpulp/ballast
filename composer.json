@@ -1,5 +1,5 @@
 {
-    "name": "digitalpulp/ballast-drupal",
+    "name": "digitalpulp/ballast",
     "description": "A local development toolset for automating Docker setup and Drupal development.",
     "type": "project",
     "license": "GPL-2.0+",
