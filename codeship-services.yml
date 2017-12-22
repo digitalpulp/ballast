@@ -2,7 +2,7 @@ code-quality:
   image: digitalpulp/code-quality
   working_dir: /var/www
   volumes_from:
-      - deploy
+    - deploy
 front-end:
   image: digitalpulp/front-end:codeship
   working_dir: /var/www/docroot/themes/custom/YOUR_THEME

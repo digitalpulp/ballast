@@ -637,6 +637,7 @@ class RoboFile extends Tasks {
     'branch' => NULL,
     'tag' => NULL,
     'commit-msg' => NULL,
+    'remote-branch' => NULL,
   ]) {
     if (!empty($options['tag'])) {
       $result = $this->deployTag($options);
@@ -666,6 +667,7 @@ class RoboFile extends Tasks {
     'branch' => InputOption::VALUE_REQUIRED,
     'tag' => InputOption::VALUE_REQUIRED,
     'commit-msg' => InputOption::VALUE_REQUIRED,
+    'remote-branch' => NULL,
   ]) {
     $this->getConfig();
     $this->setDeploymentOptions($options);
@@ -699,6 +701,7 @@ class RoboFile extends Tasks {
   public function deployBranch(array $options = [
     'branch' => InputOption::VALUE_REQUIRED,
     'commit-msg' => InputOption::VALUE_REQUIRED,
+    'remote-branch' => NULL,
   ]) {
     $this->setDeploymentOptions($options);
     $this->say('Deploying to branch ' . $options['branch']);
@@ -1081,7 +1084,12 @@ class RoboFile extends Tasks {
     $rounds = 0;
     $this->setRoots();
     $this->getConfig();
-    $flag_complete = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+    if (isset($this->configuration['site_theme_path'])) {
+      $flag_complete = sprintf('%s/%s/%s/INITIALIZED.txt', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+    }
+    else {
+      $flag_complete = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+    }
     // Sleep until the initialize file is detected or 30 rounds (5 min.) have
     // passed.
     if ($progress) {
@@ -1131,6 +1139,7 @@ class RoboFile extends Tasks {
     $this->getConfig();
     $options['remote'] = getenv('DEPLOY_TARGET');
     $options['branch'] = isset($options['branch']) ? $options['branch'] : getenv('CI_BRANCH');
+    $options['remote-branch'] = isset($options['remote-branch']) ? $options['remote-branch'] : $options['branch'];
     $options['build_id'] = substr(getenv('CI_COMMIT_ID'), 0, 7);
     // A target is required.
     if (empty($options['remote'])) {
@@ -1358,11 +1367,11 @@ class RoboFile extends Tasks {
   protected function setCleanMerge(array &$options) {
     $this->getConfig();
     // We need some simple variables for expansion in a string.
-    $local = $options['branch'] . '-deploy';
+    $local = $options['remote-branch'] . '-deploy';
     // Store for later use.
     $options['deploy-branch'] = $local;
     $remote = $options['remote'];
-    $target = $remote . '/' . $options['branch'];
+    $target = $remote . '/' . $options['remote-branch'];
     $message = 'Merge to remote: ' . $options['commit-msg'];
     $this->say('Move to a new branch that tracks the target repo.');
     $gitJobs = $this->taskGitStack()
@@ -1416,7 +1425,7 @@ class RoboFile extends Tasks {
     $gitJobs = $this->taskGitStack()
       ->stopOnFail()
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-      ->push($options['remote'], $options['deploy-branch'] . ':' . $options['branch']);
+      ->push($options['remote'], $options['deploy-branch'] . ':' . $options['remote-branch']);
     return $gitJobs->run();
   }
 
