@@ -27,7 +27,7 @@ use Symfony\Component\Yaml\Yaml;
 use DrupalFinder\DrupalFinder;
 
 /**
- * Class RoboFile for DP Docker.
+ * Class RoboFile for Ballast.
  */
 class RoboFile extends Tasks {
 
@@ -77,7 +77,7 @@ class RoboFile extends Tasks {
         $this->io()
           ->note('All the docker projects need to be in the same parent folder.  Because of the nature of NFS, this folder cannot contain any older vagrant based projects. If needed, create a directory and move this project before continuing.');
         $this->io()
-          ->text('To finish setting up DP Docker for the first time and launch this Drupal site, use the following commands:');
+          ->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
         $this->io()->listing([
           'ahoy harbor',
           'ahoy cast-off',
@@ -85,7 +85,7 @@ class RoboFile extends Tasks {
         ]);
         $this->io()->newLine();
         $this->io()
-          ->text('If you have previously installed DP Docker on this machine you are now ready to cast-off and launch.');
+          ->text('If you have previously installed Ballast on this machine you are now ready to cast-off and launch.');
         $this->io()
           ->text('To launch this Drupal site, use the following commands:');
         $this->io()->listing([
@@ -107,7 +107,7 @@ class RoboFile extends Tasks {
    * @ingroup setup
    */
   public function setupMac() {
-    $this->io()->title('Mac Setup for DP Docker');
+    $this->io()->title('Mac Setup for Ballast');
     $this->taskExec('brew update')
       ->printOutput(FALSE)
       ->printMetadata(FALSE);
@@ -162,10 +162,10 @@ class RoboFile extends Tasks {
       $result = $collection->run();
     }
     if ((isset($result) && $result instanceof Result && $result->wasSuccessful())) {
-      $this->io->success("Prerequisites prepared for DP Docker.");
+      $this->io->success("Prerequisites prepared for Ballast.");
     }
     elseif (count($required) == 0) {
-      $this->io->success("Your Mac was already prepared for DP Docker.");
+      $this->io->success("Your Mac was already prepared for Ballast.");
     }
     else {
       $this->io()
@@ -231,7 +231,7 @@ class RoboFile extends Tasks {
         }
         else {
           $this->io()
-            ->success("All set! DP Docker Machine config detected at $home/.docker/machine/machines/dp-docker");
+            ->success("All set! Ballast Docker Machine config detected at $home/.docker/machine/machines/dp-docker");
         }
         break;
 
@@ -432,7 +432,7 @@ class RoboFile extends Tasks {
    */
   public function bootMac() {
     // Boot the Docker Machine.
-    $this->io()->title('Start the DP Docker Machine.');
+    $this->io()->title('Start the Ballast Docker Machine.');
     if (!($ip = $this->getDockerMachineIp())) {
       $this->setRoots();
       // Set the default to the parent of the project folder.
@@ -452,7 +452,7 @@ class RoboFile extends Tasks {
       $result = $collection->run();
     }
     if ($ip || (isset($result) && $result->wasSuccessful())) {
-      $this->io()->success('DP Docker Machine is ready to host projects.');
+      $this->io()->success('Ballast Docker Machine is ready to host projects.');
     }
   }
 
@@ -988,7 +988,7 @@ class RoboFile extends Tasks {
       ->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
       $this->setResolverFile();
-      $this->io()->success('DP Docker DNS service started.');
+      $this->io()->success('Ballast DNS service started.');
       if ($this->confirm('Would you also like to launch the site created by this project?')) {
         $this->dockerComposeMac();
       }
