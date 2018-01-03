@@ -1118,9 +1118,16 @@ class RoboFile extends Tasks {
   protected function setClearFrontEndFlags() {
     $this->setRoots();
     $this->getConfig();
-    $flag_npm_install = sprintf('%s/themes/custom/%s/BUILDING.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
-    $flag_gulp_build = sprintf('%s/themes/custom/%s/COMPILING.TXT', $this->drupalRoot, $this->configuration['site_theme_name']);
-    $flag_file = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+    if (isset($this->configuration['site_theme_path'])) {
+      $flag_file = sprintf('%s/%s/%s/INITIALIZED.txt', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+      $flag_npm_install = sprintf('%s/%s/%s/BUILDING.txt', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+      $flag_gulp_build = sprintf('%s/%s/%s/COMPILING.TXT', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+    }
+    else {
+      $flag_file = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+      $flag_npm_install = sprintf('%s/themes/custom/%s/BUILDING.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+      $flag_gulp_build = sprintf('%s/themes/custom/%s/COMPILING.TXT', $this->drupalRoot, $this->configuration['site_theme_name']);
+    }
     // Remove flags.
     $this->taskFilesystemStack()
       ->remove($flag_file)
