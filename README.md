@@ -39,7 +39,10 @@ _After the initial setup, you should delete the Initial Setup section of
 this README._
 
 ### Edit `setup/config.yml`
-There are some project specific values that should be set in this file.
+There are some project specific values that should be set in this file. The
+default location for custom themes is `docroot/themes/custom`. This can be
+altered by adding a `site_theme_path` key to this file and setting it to the
+relative path from the project root to parent directory for custom themes.
 
 ### Edit `composer.json`
 There is also a project specific value to set here, which is the path to
@@ -81,9 +84,10 @@ on the `develop` branch will be built and deployed.
 There are two environment variables and one path which need to be set in
 `codeship-services.yml` found in the root of the project repo:
 
--  front-end : environment : THEME_NAME - The folder/machine name of
-   your custom theme. This folder should be present in
-   `docroot/themes/custom`.
+-  front-end : environment : THEME_NAME - The folder/machine name of your custom
+   theme. This folder should be present in `docroot/themes/custom`. If you set
+   `site_theme_path` in `setup/config.yml` then also set THEME_PATH here to the
+   same value.
 -  front-end : working_dir - set this value to the full path in the container to
    the theme folder.  Usually `/var/www/docroot/themes/custom/yourtheme`
 -  deploy : environment : DEPLOY_TARGET - The url of the git remote to
