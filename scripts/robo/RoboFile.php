@@ -1133,6 +1133,7 @@ class RoboFile extends Tasks {
       ->remove($flag_file)
       ->remove($flag_npm_install)
       ->remove($flag_gulp_build)
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
   }
 
