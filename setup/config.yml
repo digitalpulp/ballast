@@ -1,6 +1,7 @@
 ---
 site_shortname: project
 site_theme_name: project
+site_theme_path:
 site_acquia_name: project
 site_folder: default
 site_proxy_origin_url: https://example.com

@@ -27,7 +27,7 @@ use Symfony\Component\Yaml\Yaml;
 use DrupalFinder\DrupalFinder;
 
 /**
- * Class RoboFile for DP Docker.
+ * Class RoboFile for Ballast.
  */
 class RoboFile extends Tasks {
 
@@ -77,7 +77,7 @@ class RoboFile extends Tasks {
         $this->io()
           ->note('All the docker projects need to be in the same parent folder.  Because of the nature of NFS, this folder cannot contain any older vagrant based projects. If needed, create a directory and move this project before continuing.');
         $this->io()
-          ->text('To finish setting up DP Docker for the first time and launch this Drupal site, use the following commands:');
+          ->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
         $this->io()->listing([
           'ahoy harbor',
           'ahoy cast-off',
@@ -85,7 +85,7 @@ class RoboFile extends Tasks {
         ]);
         $this->io()->newLine();
         $this->io()
-          ->text('If you have previously installed DP Docker on this machine you are now ready to cast-off and launch.');
+          ->text('If you have previously installed Ballast on this machine you are now ready to cast-off and launch.');
         $this->io()
           ->text('To launch this Drupal site, use the following commands:');
         $this->io()->listing([
@@ -107,7 +107,7 @@ class RoboFile extends Tasks {
    * @ingroup setup
    */
   public function setupMac() {
-    $this->io()->title('Mac Setup for DP Docker');
+    $this->io()->title('Mac Setup for Ballast');
     $this->taskExec('brew update')
       ->printOutput(FALSE)
       ->printMetadata(FALSE);
@@ -162,10 +162,10 @@ class RoboFile extends Tasks {
       $result = $collection->run();
     }
     if ((isset($result) && $result instanceof Result && $result->wasSuccessful())) {
-      $this->io->success("Prerequisites prepared for DP Docker.");
+      $this->io->success("Prerequisites prepared for Ballast.");
     }
     elseif (count($required) == 0) {
-      $this->io->success("Your Mac was already prepared for DP Docker.");
+      $this->io->success("Your Mac was already prepared for Ballast.");
     }
     else {
       $this->io()
@@ -231,7 +231,7 @@ class RoboFile extends Tasks {
         }
         else {
           $this->io()
-            ->success("All set! DP Docker Machine config detected at $home/.docker/machine/machines/dp-docker");
+            ->success("All set! Ballast Docker Machine config detected at $home/.docker/machine/machines/dp-docker");
         }
         break;
 
@@ -432,7 +432,7 @@ class RoboFile extends Tasks {
    */
   public function bootMac() {
     // Boot the Docker Machine.
-    $this->io()->title('Start the DP Docker Machine.');
+    $this->io()->title('Start the Ballast Docker Machine.');
     if (!($ip = $this->getDockerMachineIp())) {
       $this->setRoots();
       // Set the default to the parent of the project folder.
@@ -452,7 +452,7 @@ class RoboFile extends Tasks {
       $result = $collection->run();
     }
     if ($ip || (isset($result) && $result->wasSuccessful())) {
-      $this->io()->success('DP Docker Machine is ready to host projects.');
+      $this->io()->success('Ballast Docker Machine is ready to host projects.');
     }
   }
 
@@ -637,6 +637,7 @@ class RoboFile extends Tasks {
     'branch' => NULL,
     'tag' => NULL,
     'commit-msg' => NULL,
+    'remote-branch' => NULL,
   ]) {
     if (!empty($options['tag'])) {
       $result = $this->deployTag($options);
@@ -666,6 +667,7 @@ class RoboFile extends Tasks {
     'branch' => InputOption::VALUE_REQUIRED,
     'tag' => InputOption::VALUE_REQUIRED,
     'commit-msg' => InputOption::VALUE_REQUIRED,
+    'remote-branch' => NULL,
   ]) {
     $this->getConfig();
     $this->setDeploymentOptions($options);
@@ -699,6 +701,7 @@ class RoboFile extends Tasks {
   public function deployBranch(array $options = [
     'branch' => InputOption::VALUE_REQUIRED,
     'commit-msg' => InputOption::VALUE_REQUIRED,
+    'remote-branch' => NULL,
   ]) {
     $this->setDeploymentOptions($options);
     $this->say('Deploying to branch ' . $options['branch']);
@@ -985,7 +988,7 @@ class RoboFile extends Tasks {
       ->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
       $this->setResolverFile();
-      $this->io()->success('DP Docker DNS service started.');
+      $this->io()->success('Ballast DNS service started.');
       if ($this->confirm('Would you also like to launch the site created by this project?')) {
         $this->dockerComposeMac();
       }
@@ -1081,7 +1084,12 @@ class RoboFile extends Tasks {
     $rounds = 0;
     $this->setRoots();
     $this->getConfig();
-    $flag_complete = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+    if (isset($this->configuration['site_theme_path'])) {
+      $flag_complete = sprintf('%s/%s/%s/INITIALIZED.txt', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+    }
+    else {
+      $flag_complete = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+    }
     // Sleep until the initialize file is detected or 30 rounds (5 min.) have
     // passed.
     if ($progress) {
@@ -1110,14 +1118,22 @@ class RoboFile extends Tasks {
   protected function setClearFrontEndFlags() {
     $this->setRoots();
     $this->getConfig();
-    $flag_npm_install = sprintf('%s/themes/custom/%s/BUILDING.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
-    $flag_gulp_build = sprintf('%s/themes/custom/%s/COMPILING.TXT', $this->drupalRoot, $this->configuration['site_theme_name']);
-    $flag_file = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+    if (isset($this->configuration['site_theme_path'])) {
+      $flag_file = sprintf('%s/%s/%s/INITIALIZED.txt', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+      $flag_npm_install = sprintf('%s/%s/%s/BUILDING.txt', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+      $flag_gulp_build = sprintf('%s/%s/%s/COMPILING.TXT', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+    }
+    else {
+      $flag_file = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+      $flag_npm_install = sprintf('%s/themes/custom/%s/BUILDING.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+      $flag_gulp_build = sprintf('%s/themes/custom/%s/COMPILING.TXT', $this->drupalRoot, $this->configuration['site_theme_name']);
+    }
     // Remove flags.
     $this->taskFilesystemStack()
       ->remove($flag_file)
       ->remove($flag_npm_install)
       ->remove($flag_gulp_build)
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
   }
 
@@ -1131,6 +1147,7 @@ class RoboFile extends Tasks {
     $this->getConfig();
     $options['remote'] = getenv('DEPLOY_TARGET');
     $options['branch'] = isset($options['branch']) ? $options['branch'] : getenv('CI_BRANCH');
+    $options['remote-branch'] = isset($options['remote-branch']) ? $options['remote-branch'] : $options['branch'];
     $options['build_id'] = substr(getenv('CI_COMMIT_ID'), 0, 7);
     // A target is required.
     if (empty($options['remote'])) {
@@ -1358,11 +1375,11 @@ class RoboFile extends Tasks {
   protected function setCleanMerge(array &$options) {
     $this->getConfig();
     // We need some simple variables for expansion in a string.
-    $local = $options['branch'] . '-deploy';
+    $local = $options['remote-branch'] . '-deploy';
     // Store for later use.
     $options['deploy-branch'] = $local;
     $remote = $options['remote'];
-    $target = $remote . '/' . $options['branch'];
+    $target = $remote . '/' . $options['remote-branch'];
     $message = 'Merge to remote: ' . $options['commit-msg'];
     $this->say('Move to a new branch that tracks the target repo.');
     $gitJobs = $this->taskGitStack()
@@ -1416,7 +1433,7 @@ class RoboFile extends Tasks {
     $gitJobs = $this->taskGitStack()
       ->stopOnFail()
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-      ->push($options['remote'], $options['deploy-branch'] . ':' . $options['branch']);
+      ->push($options['remote'], $options['deploy-branch'] . ':' . $options['remote-branch']);
     return $gitJobs->run();
   }
 
