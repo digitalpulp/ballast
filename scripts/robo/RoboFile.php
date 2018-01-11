@@ -140,9 +140,9 @@ class RoboFile extends Tasks {
           );
         }
         $collection->addTask(
-          $this->taskExec('brew '. ($settings['cask'] ? 'cask ' : '') . 'install ' . $package)
+          $this->taskExec('brew ' . ($settings['cask'] ? 'cask ' : '') . 'install ' . $package)
         )->rollback(
-          $this->taskExec('brew '. ($settings['cask'] ? 'cask ' : '') . "uninstall $package")
+          $this->taskExec('brew ' . ($settings['cask'] ? 'cask ' : '') . "uninstall $package")
         );
       }
 
@@ -229,7 +229,7 @@ class RoboFile extends Tasks {
   }
 
   /**
-   * Download Linux kernel and create the virtualbox based VM for Mac containers.
+   * Download Linux kernel: create the virtualbox based VM for Mac containers.
    */
   public function setupDockerMac() {
     $this->io()->title('Build the dp-docker machine');
@@ -608,7 +608,6 @@ class RoboFile extends Tasks {
     $this->io()->text("Username, password, and database are all 'drupal'");
     $this->io()->note("Both the ip and port can vary between re-boots");
   }
-
 
   /**
    * @defgroup deploy Deployment Commands
