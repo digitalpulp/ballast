@@ -127,10 +127,6 @@ class RoboFile extends Tasks {
     }
     $required = $this->getRequirements('mac');
     if (count($required) > 0) {
-      // The docker-machine-driver-xhyve requires some filesystem changes.
-      if (isset($required['docker-machine-driver-xhyve'])) {
-        $bless = TRUE;
-      }
       $this->io()->text('The following packages need to be installed:');
       $this->io()->listing(array_column($required, 'name'));
       $collection = $this->collectionBuilder();
@@ -144,21 +140,12 @@ class RoboFile extends Tasks {
           );
         }
         $collection->addTask(
-          $this->taskExec('brew install ' . ($settings['head'] ? '--HEAD ' : '') . $package)
+          $this->taskExec('brew '. ($settings['cask'] ? 'cask ' : '') . 'install ' . $package)
         )->rollback(
-          $this->taskExec("brew uninstall $package")
+          $this->taskExec('brew '. ($settings['cask'] ? 'cask ' : '') . "uninstall $package")
         );
       }
-      if (isset($bless)) {
-        // Bless the xhyve docker machine driver.
-        $collection->progressMessage('The xhyve Driver for Docker Machine requires superuser privileges to access the hypervisor.');
-        $collection->addTask(
-          $this->taskExec('sudo chown root:wheel /usr/local/opt/docker-machine-driver-xhyve/bin/docker-machine-driver-xhyve')
-        );
-        $collection->addTask(
-          $this->taskExec('sudo chmod u+s /usr/local/opt/docker-machine-driver-xhyve/bin/docker-machine-driver-xhyve')
-        );
-      }
+
       $result = $collection->run();
     }
     if ((isset($result) && $result instanceof Result && $result->wasSuccessful())) {
@@ -242,13 +229,13 @@ class RoboFile extends Tasks {
   }
 
   /**
-   * Download Linux kernel and create the xhyvee based VM for Mac containers.
+   * Download Linux kernel and create the virtualbox based VM for Mac containers.
    */
   public function setupDockerMac() {
     $this->io()->title('Build the dp-docker machine');
     $collection = $this->collectionBuilder();
     $collection->addTask(
-      $this->taskExec('docker-machine create -d xhyve --xhyve-memory-size 2048 dp-docker')
+      $this->taskExec('docker-machine create -d virtualbox --virtualbox-memory 2048 -virtualbox-no-share dp-docker')
     )->rollback(
       $this->taskExec('docker-machine rm dp-docker')
     );
@@ -307,6 +294,9 @@ class RoboFile extends Tasks {
           ->option('network', 'proxynet')
       )->rollback(
         $this->taskDockerRemove('http-proxy')
+      );
+      $boot_task->addTask(
+        $this->taskExec('docker-machine stop dp-docker')
       );
       $result = $boot_task->run();
       if ($result instanceof Result && $result->wasSuccessful()) {
@@ -817,37 +807,32 @@ class RoboFile extends Tasks {
           'ahoy' => [
             'name' => 'Ahoy',
             'tap' => 'ahoy-cli/tap',
-            'head' => FALSE,
+            'cask' => FALSE,
           ],
-          'xhyve' => [
-            'name' => 'xhyve',
+          'virtualbox' => [
+            'name' => 'virtualbox',
             'tap' => '',
-            'head' => TRUE,
-          ],
-          'docker-machine-driver-xhyve' => [
-            'name' => 'xhyve Driver for Docker Machine',
-            'tap' => '',
-            'head' => FALSE,
+            'cask' => TRUE,
           ],
           'docker' => [
             'name' => 'Docker',
             'tap' => '',
-            'head' => FALSE,
+            'cask' => FALSE,
           ],
           'docker-compose' => [
             'name' => 'Docker Compose',
             'tap' => '',
-            'head' => FALSE,
+            'cask' => FALSE,
           ],
           'pre-commit' => [
             'name' => 'pre-commit by Yelp',
             'tap' => '',
-            'head' => FALSE,
+            'cask' => FALSE,
           ],
           'docker-machine-nfs' => [
             'name' => 'Docker Machine NFS',
             'tap' => '',
-            'head' => FALSE,
+            'cask' => FALSE,
           ],
         ];
         $brewed = $this->getBrewedComponents();
