@@ -32,11 +32,11 @@ NFS they must not be in the chosen folder.
     * The easiest way forward is
 to create a new folder such as `~/DockerSites`.
 
-4. In the folder just chosen or create, `composer create-project digitalpulp/ballast  your_project`.
-
 ## Initial Setup
 _After the initial setup, you should delete the Initial Setup section of
 this README._
+
+In the folder chosen or created under _Getting Started_, `composer create-project digitalpulp/ballast  your_project`.
 
 ### Edit `setup/config.yml`
 There are some project specific values that should be set in this file. The
