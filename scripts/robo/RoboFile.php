@@ -582,6 +582,30 @@ class RoboFile extends Tasks {
         }
         else {
           $this->setMacDockerEnv();
+          $dumpRemote = $this->collectionBuilder();
+          $dumpRemote->addTask(
+            $this->taskExec("$this->projectRoot/vendor/bin/drush --alias-path='$this->projectRoot/drush/sites' @$target sql-dump --result-file= > $this->projectRoot/target.sql")
+          );
+          $dumpRemote->addTask(
+            $this->taskReplaceInFile("$this->projectRoot/target.sql")
+              ->regex('~Connection to(.*)closed.~')
+              ->to('--')
+          );
+          $result = $dumpRemote->run();
+          if ($result instanceof Result && $result->wasSuccessful()) {
+            $this->taskExecStack()->stopOnFail()
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush -y sql-drop || true")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush sqlsan -y --sanitize-password=dp --sanitize-email=user-%uid@example.com")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush cim sync -y")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush cr")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush -y updb")
+              ->exec("docker-compose $this->dockerConfig exec -T front-end node_modules/.bin/gulp build")
+              ->run();
+          }
+          else {
+            $this->io()->error('The db dump from the remote system failed to complete');
+          }
         }
         break;
 
@@ -589,16 +613,6 @@ class RoboFile extends Tasks {
         $this->io()
           ->error("Unable to determine your operating system.");
     }
-    $this->taskExecStack()->stopOnFail()
-      ->exec("$this->projectRoot/vendor/bin/drush --alias-path='$this->projectRoot/drush/aliases' @$target sql-dump --result-file= > $this->projectRoot/target.sql")
-      ->exec('docker-compose exec -T cli drush -y sql-drop || true')
-      ->exec("docker-compose exec -T cli drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
-      ->exec('docker-compose exec -T cli drush sqlsan -y --sanitize-password=dp --sanitize-email=user-%uid@example.com')
-      ->exec('docker-compose exec -T cli drush cim sync -y')
-      ->exec('docker-compose exec -T cli drush cr')
-      ->exec('docker-compose exec -T cli drush -y updb')
-      ->exec('docker-compose exec -T front-end node_modules/.bin/gulp build')
-      ->run();
   }
 
   /**
