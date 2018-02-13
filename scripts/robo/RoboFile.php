@@ -597,9 +597,9 @@ class RoboFile extends Tasks {
               ->exec("docker-compose $this->dockerConfig exec -T cli drush -y sql-drop || true")
               ->exec("docker-compose $this->dockerConfig exec -T cli drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
               ->exec("docker-compose $this->dockerConfig exec -T cli drush sqlsan -y --sanitize-password=dp --sanitize-email=user-%uid@example.com")
-              ->exec("docker-compose $this->dockerConfig exec -T cli drush cim sync -y")
-              ->exec("docker-compose $this->dockerConfig exec -T cli drush cr")
               ->exec("docker-compose $this->dockerConfig exec -T cli drush -y updb")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush cim -y sync")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush -y cr")
               ->exec("docker-compose $this->dockerConfig exec -T front-end node_modules/.bin/gulp build")
               ->run();
           }

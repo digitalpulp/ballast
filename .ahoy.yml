@@ -41,10 +41,10 @@ commands:
     cmd: docker-compose $(docker-machine config dp-docker) stop
   drush:
     usage: Run drush commands within the drupal site. Follow `ahoy drush` with the drush command to be run.
-    cmd: docker-compose $(docker-machine config dp-docker) exec cli /home/www-data/.composer/vendor/bin/drush "$@"
+    cmd: docker-compose $(docker-machine config dp-docker) exec cli drush "$@"
   drupal:
     usage: Run drupal console commands within the drupal site. Follow `ahoy drupal` with the drupal console command to be run.
-    cmd:  docker-compose $(docker-machine config dp-docker) exec cli /var/www/vendor/bin/drupal "$@"
+    cmd:  docker-compose $(docker-machine config dp-docker) exec cli drupal "$@"
   gulp:
     usage: Pass commands to gulp within the container. Follow `ahoy gulp` with the gulp command to be run.
     cmd: docker-compose $(docker-machine config dp-docker) exec front-end node_modules/.bin/gulp "$@"
