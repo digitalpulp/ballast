@@ -53,6 +53,13 @@ class RoboFile extends Tasks {
   protected $projectRoot;
 
   /**
+   * Docker Machine generated config string.
+   *
+   * @var string
+   */
+  protected $dockerConfig;
+
+  /**
    * @defgroup setup Initial Setup.
    */
 
@@ -280,20 +287,18 @@ class RoboFile extends Tasks {
       // @see https://hub.docker.com/r/jwilder/nginx-proxy/
       $boot_task = $this->collectionBuilder();
       $boot_task->addTask(
-        $this->taskExec('docker network create proxynet')
+        $this->taskExec("docker $this->dockerConfig network create proxynet")
       )->rollback(
-        $this->taskExec('docker network prune')
+        $this->taskExec("docker $this->dockerConfig network prune")
       );
+      $command = "docker $this->dockerConfig run";
+      $command .= ' -d -v /var/run/docker.sock:/tmp/docker.sock:ro';
+      $command .= ' -p 80:80 --restart always --network proxynet';
+      $command .= ' --name http-proxy digitalpulp/nginx-proxy';
       $boot_task->addTask(
-        $this->taskDockerRun('digitalpulp/nginx-proxy')
-          ->volume('/var/run/docker.sock', '/tmp/docker.sock:ro')
-          ->name('http-proxy')
-          ->detached()
-          ->publish(80, 80)
-          ->option('restart', 'always')
-          ->option('network', 'proxynet')
+        $this->taskExec($command)
       )->rollback(
-        $this->taskDockerRemove('http-proxy')
+        $this->taskExec("docker $this->dockerConfig rm http-proxy")
       );
       $boot_task->addTask(
         $this->taskExec('docker-machine stop dp-docker')
@@ -540,7 +545,7 @@ class RoboFile extends Tasks {
           "$this->projectRoot/docker-compose.yml", TRUE)
     );
     $collection->run();
-    $command = 'docker-compose up -d';
+    $command = "docker-compose $this->dockerConfig up -d ";
     $result = $this->taskExec($command)->run();
     if (isset($result) && $result->wasSuccessful()) {
       $this->io()
@@ -577,6 +582,30 @@ class RoboFile extends Tasks {
         }
         else {
           $this->setMacDockerEnv();
+          $dumpRemote = $this->collectionBuilder();
+          $dumpRemote->addTask(
+            $this->taskExec("$this->projectRoot/vendor/bin/drush --alias-path='$this->projectRoot/drush/sites' @$target sql-dump --result-file= > $this->projectRoot/target.sql")
+          );
+          $dumpRemote->addTask(
+            $this->taskReplaceInFile("$this->projectRoot/target.sql")
+              ->regex('~Connection to(.*)closed.~')
+              ->to('--')
+          );
+          $result = $dumpRemote->run();
+          if ($result instanceof Result && $result->wasSuccessful()) {
+            $this->taskExecStack()->stopOnFail()
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush -y sql-drop || true")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush sqlsan -y --sanitize-password=dp --sanitize-email=user-%uid@example.com")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush cim sync -y")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush cr")
+              ->exec("docker-compose $this->dockerConfig exec -T cli drush -y updb")
+              ->exec("docker-compose $this->dockerConfig exec -T front-end node_modules/.bin/gulp build")
+              ->run();
+          }
+          else {
+            $this->io()->error('The db dump from the remote system failed to complete');
+          }
         }
         break;
 
@@ -584,16 +613,6 @@ class RoboFile extends Tasks {
         $this->io()
           ->error("Unable to determine your operating system.");
     }
-    $this->taskExecStack()->stopOnFail()
-      ->exec("$this->projectRoot/vendor/bin/drush --alias-path='$this->projectRoot/drush/aliases' @$target sql-dump --result-file= > $this->projectRoot/target.sql")
-      ->exec('docker-compose exec -T cli drush -y sql-drop || true')
-      ->exec("docker-compose exec -T cli drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
-      ->exec('docker-compose exec -T cli drush sqlsan -y --sanitize-password=dp --sanitize-email=user-%uid@example.com')
-      ->exec('docker-compose exec -T cli drush cim sync -y')
-      ->exec('docker-compose exec -T cli drush cr')
-      ->exec('docker-compose exec -T cli drush -y updb')
-      ->exec('docker-compose exec -T front-end node_modules/.bin/gulp build')
-      ->run();
   }
 
   /**
@@ -920,7 +939,7 @@ class RoboFile extends Tasks {
     // Get the port string.
     $port = NULL;
     $this->setMacDockerEnv();
-    $result = $this->taskExec('docker-compose port database 3306')
+    $result = $this->taskExec("docker-compose $this->dockerConfig port database 3306")
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
@@ -937,11 +956,15 @@ class RoboFile extends Tasks {
    */
   protected function setMacDnsmasq() {
     $this->setMacDockerEnv();
-    $result = $this->taskExec('docker inspect dnsmasq')
+    if (!isset($this->dockerConfig)) {
+      $this->io()->error('Unable to connect to docker machine.');
+      return;
+    }
+    $result = $this->taskExec("docker $this->dockerConfig inspect dnsmasq")
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
       ->run();
-    if ($result->wasSuccessful()) {
+    if ($result instanceof Result && $result->wasSuccessful()) {
       $inspection = json_decode($result->getMessage(), 'assoc');
       if (!empty($inspection) && is_array($inspection)) {
         // There should be only one.
@@ -956,19 +979,23 @@ class RoboFile extends Tasks {
           // The container is stopped - remove so it is recreated to
           // renew the ip of the docker machine.
           $this->say('Container exists but is stopped.');
-          $this->taskDockerRemove('dnsmasq')->run();
+          $this->taskExec("docker $this->dockerConfig rm dnsmasq")
+            ->printOutput(FALSE)
+            ->printMetadata(FALSE)
+            ->run();
         }
       }
     }
     // Either there is no dns container or it has been removed.
     $ip = $this->getDockerMachineIp();
-    $result = $this->taskDockerRun('andyshinn/dnsmasq:2.76')
-      ->name('dnsmasq')
-      ->detached()
-      ->optionList('publish', ['53535:53/tcp', '53535:53/udp'])
-      ->option('cap-add', 'NET_ADMIN')
-      ->exec("--address=/dpulp/$ip")
+    $command = "docker $this->dockerConfig run";
+    $command .= ' -d --name dnsmasq';
+    $command .= " --publish '53535:53/tcp' --publish '53535:53/udp'";
+    $command .= ' --cap-add NET_ADMIN  andyshinn/dnsmasq:2.76';
+    $command .= " --address=/dpulp/$ip";
+    $result = $this->taskExec($command)
       ->printOutput(FALSE)
+      ->printMetadata(FALSE)
       ->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
       $this->setResolverFile();
@@ -978,7 +1005,7 @@ class RoboFile extends Tasks {
       }
     }
     else {
-      $this->io()->error('Unable to connect to docker daemon.');
+      $this->io()->error('Unable to create dns container.');
       return;
     }
   }
@@ -1031,12 +1058,17 @@ class RoboFile extends Tasks {
    * Utility function to set Docker environment variables.
    */
   protected function setMacDockerEnv() {
-    $url = $this->getDockerMachineUrl();
-    $home = getenv('HOME');
-    putenv('DOCKER_HOST=' . $url);
-    putenv('DOCKER_TLS_VERIFY="1"');
-    putenv("DOCKER_CERT_PATH=$home/.docker/machine/machines/dp-docker");
-    putenv('DOCKER_MACHINE_NAME=dp-docker');
+    if (!isset($this->dockerConfig)) {
+      $result = $this->taskExec('docker-machine config dp-docker')
+        ->printOutput(FALSE)
+        ->printMetadata(FALSE)
+        ->run();
+      $this->io()->newLine();
+      if ($result instanceof Result && $result->wasSuccessful()) {
+        $this->dockerConfig = str_replace(["\r", "\n"], ' ',
+          $result->getMessage());
+      }
+    }
   }
 
   /**
