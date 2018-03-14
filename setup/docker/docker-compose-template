@@ -52,7 +52,7 @@ services:
       - internal
     working_dir: /var/www/docroot/themes/custom/{site_theme_name}
   cli:
-    image: digitalpulp/cli:7.1-alpine-cli-1.0.9
+    image: digitalpulp/cli:7.1-alpine-cli-1.0.11
     depends_on:
       - database
       - php
@@ -62,6 +62,15 @@ services:
     working_dir: /var/www/docroot/
     networks:
       - internal
+    environment:
+      XDEBUG_HOST: {host_ip}
+      PHP_IDE_CONFIG: serverName={site_shortname}.dpulp
+#  solr:
+#    image: wodby/drupal-solr:8-5.5-2.3.0
+#    environment:
+#      SOLR_HEAP: 1024m
+#    networks:
+#      - internal
 volumes:
   db:
 networks:

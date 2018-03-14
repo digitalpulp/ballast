@@ -45,3 +45,7 @@ services.dev.yml
 
 # ahoy/docker managed
 node_modules
+
+# Dev files
+*.sql
+docroot/.ht.router.php
