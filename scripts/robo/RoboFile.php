@@ -570,6 +570,9 @@ class RoboFile extends Tasks {
    *   The environment key.
    */
   public function rebuild($environment = 'dev') {
+    /*
+     * Intitialize.
+     */
     $this->setRoots();
     $this->getConfig();
     $target = $this->configuration['site_acquia_name'] . '.' . $environment;
@@ -582,26 +585,110 @@ class RoboFile extends Tasks {
         }
         else {
           $this->setMacDockerEnv();
+          /*
+           * Dump the remote database from the host so we don't have to mess with ssh keys.
+           */
+          $this->io()->text('Dumping remote database');
           $dumpRemote = $this->collectionBuilder();
           $dumpRemote->addTask(
             $this->taskExec("$this->projectRoot/vendor/bin/drush --alias-path='$this->projectRoot/drush/sites' @$target sql-dump --result-file= > $this->projectRoot/target.sql")
+              ->printMetadata(FALSE)
+              ->printOutput(TRUE)
           );
           $dumpRemote->addTask(
             $this->taskReplaceInFile("$this->projectRoot/target.sql")
               ->regex('~Connection to(.*)closed.~')
               ->to('--')
+              ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
           );
-          $result = $dumpRemote->run();
+          $result = $dumpRemote->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)->run();
           if ($result instanceof Result && $result->wasSuccessful()) {
-            $this->taskExecStack()->stopOnFail()
-              ->exec("docker-compose $this->dockerConfig exec -T cli drush -y sql-drop || true")
-              ->exec("docker-compose $this->dockerConfig exec -T cli drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
-              ->exec("docker-compose $this->dockerConfig exec -T cli drush sqlsan -y --sanitize-password=dp --sanitize-email=user-%uid@example.com")
-              ->exec("docker-compose $this->dockerConfig exec -T cli drush -y updb")
-              ->exec("docker-compose $this->dockerConfig exec -T cli drush cim -y sync")
-              ->exec("docker-compose $this->dockerConfig exec -T cli drush -y cr")
-              ->exec("docker-compose $this->dockerConfig exec -T front-end node_modules/.bin/gulp build")
+            $this->io()->text('Remote database dumped.');
+            /*
+             * Import the dump into the docker managed database.
+             */
+            $this->io()->newLine();
+            $this->io()->text('Loading remote dump to local database.');
+            $loadRemote = $this->collectionBuilder();
+            $loadRemote->addTask(
+              $this->taskExec("docker-compose $this->dockerConfig exec -T cli drush -y sql-drop || true")
+                ->printMetadata(FALSE)
+                ->printOutput(FALSE)
+            );
+            $loadRemote->addTask(
+              $this->taskExec("docker-compose $this->dockerConfig exec -T cli drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
+                ->printMetadata(FALSE)
+                ->printOutput(FALSE)
+            );
+            $loadRemote->addTask(
+              $this->taskExec("docker-compose $this->dockerConfig exec -T cli drush sqlsan -y --sanitize-password=dp --sanitize-email=user-%uid@example.com")
+                ->printMetadata(FALSE)
+                ->printOutput(FALSE)
+            );
+            $loadResult = $loadRemote->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)->run();
+            if ($loadResult instanceof Result && $loadResult->wasSuccessful()) {
+              $this->io()->text('Remote database loaded.');
+            }
+            else {
+              $this->io()->error('The db dump from the remote system failed to load.');
+              $this->io()->newLine();
+              $this->io()->text($loadResult->getMessage());
+              throw new RuntimeException();
+            }
+            /*
+             * Run update hooks and import local config.
+             */
+            $this->io()->newLine();
+            $this->io()->text('Running database updates and importing config.');
+            $updateResult = $this->taskExec("docker-compose $this->dockerConfig exec cli drush -y updb")
+              ->printMetadata(FALSE)
+              ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_NORMAL)
               ->run();
+            $this->io()->newLine();
+            $this->io()->text('Rebuilding cache before importing config to enable any overrides.');
+            $this->taskExec("docker-compose $this->dockerConfig exec -T cli drush -y cr")
+              ->printMetadata(FALSE)
+              ->printOutput(FALSE)
+              ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+              ->run();
+            $updateResult->merge($this->taskExec("docker-compose $this->dockerConfig exec cli drush -y cim")
+              ->printMetadata(FALSE)
+              ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_NORMAL)
+              ->run());
+            $this->io()->newLine();
+            $this->io()->text('Rebuilding cache after importing config.');
+            $this->taskExec("docker-compose $this->dockerConfig exec -T cli drush -y cr")
+              ->printMetadata(FALSE)
+              ->printOutput(FALSE)
+              ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+              ->run();
+            if (!($updateResult instanceof Result && $updateResult->wasSuccessful())) {
+              $this->io()->error('Database updates and/or config imports failed to load.');
+              $this->io()->newLine();
+              throw new RuntimeException();
+            }
+            /*
+             * Rebuild the theme.
+             */
+            $this->io()->newLine();
+            $this->io()->text('Building the theme.');
+            $gulpResult = $this->taskExec("docker-compose $this->dockerConfig exec -T front-end node_modules/.bin/gulp build")
+              ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+              ->run();
+            if ($gulpResult instanceof Result && $loadResult->wasSuccessful()) {
+              $this->io()->text('Theme compiled');
+            }
+            else {
+              $this->io()->error('The theme failed to compile.');
+              $this->io()->newLine();
+              $this->io()->text($gulpResult->getMessage());
+              throw new RuntimeException();
+            }
+            if ($loadResult instanceof Result && $gulpResult instanceof Result
+            && $updateResult instanceof Result && $updateResult->wasSuccessful()
+            && $loadResult->wasSuccessful() && $gulpResult->wasSuccessful()) {
+              $this->io()->success("Local site rebuilt from $environment");
+            }
           }
           else {
             $this->io()->error('The db dump from the remote system failed to complete');
