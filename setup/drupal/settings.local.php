@@ -94,9 +94,9 @@ $settings['trusted_host_patterns'][] =   '^{site_shortname}.dpulp$';
 //$config['config_split.config_split.prod']['status'] = TRUE;
 
 /* Config for stage file proxy */
-$config['stage_file_proxy']['origin'] = '{site_proxy_origin_url}';
-$config['stage_file_proxy']['hotlink'] = TRUE;
-$config['stage_file_proxy']['verify'] = TRUE;
+$config['stage_file_proxy.settings']['origin'] = '{site_proxy_origin_url}';
+$config['stage_file_proxy.settings']['use_imagecache_root'] = TRUE;
+$config['stage_file_proxy.settings']['verify'] = TRUE;
 
 $dir = '/var/www';
 $config_directories[CONFIG_SYNC_DIRECTORY] = $dir . '/config';
