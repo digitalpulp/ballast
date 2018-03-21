@@ -7,8 +7,7 @@ Key contributors:
 
 ## A Composer template for Drupal projects with Docker
 
-This project template automates [Docker](https://www.docker.com/) based local development with
-with [Drupal Composer](https://github.com/drupal-composer/drupal-project) workflows. The local development automation is
+This project template automates [Docker](https://www.docker.com/) based local development with [Drupal Composer](https://github.com/drupal-composer/drupal-project) workflows. The local development automation is
 currently only optimized for macOS but Linux and possibly Windows
 may follow.
 
