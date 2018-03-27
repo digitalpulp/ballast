@@ -11,9 +11,20 @@
 # Ignore sensitive information
 # /docroot/sites/*/settings.php
 /docroot/sites/*/settings.local.php
+codeship.aes
+/keys/
+id_rsa
+id_rsa.pub
+env
+slack.sh
+slack-db-copy.sh
+slack-code-deploy.sh
 
 # Ignore Drupal's file directory
 /docroot/sites/*/files/
+
+# Ignore Drupal's private file directory
+files-private
 
 # Ignore SimpleTest multi-site environment.
 /docroot/sites/simpletest
@@ -35,6 +46,12 @@ docroot/console/log
 
 # robo managed
 docker-compose.yml
+services.dev.yml
+!setup/drupal/services.dev.yml
 
 # ahoy/docker managed
 node_modules
+
+# Dev files
+*.sql
+docroot/.ht.router.php

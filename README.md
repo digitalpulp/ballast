@@ -102,14 +102,13 @@ Deployment credentials should not be stored in the repo in the clear, but Codesh
 5. Create a new file named `env` (Both this file and `codeship.aes` are
    set to be ignored by git).
 6. Copy or create a private key that matches the public key installed in
-   your target git remote to the project root.
+   your target git remote to the project root or to a `/keys` directory in the project.
 7. Use the ahoy commands to bring up the local project.
-8. Use advanced command `ahoy key-prep private_key` to get your private
-   key in a one-line format
+8. Use advanced command `ahoy key-prep path/to/private_key` to get your private
+   key in a one-line format and appended to the `env` file.
 9. Execute `ssh user@git_remote_url` if you have not accessed this git
    remote before to add the remote to your `~/.ssh/known_hosts`.
-10. Define the environment variables in `env` copying the one line
-    private key, the appropriate line from `~/.ssh/known_hosts`, and the
+10. Define the environment variables in `env` copying the appropriate line from `~/.ssh/known_hosts`, and the
     name and email to use when commiting the build like this:
     ```
     SSH_PRIVATE_KEY=one-line-key copied from the terminal

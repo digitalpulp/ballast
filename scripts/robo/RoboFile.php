@@ -564,6 +564,261 @@ class RoboFile extends Tasks {
   }
 
   /**
+   * @defgroup ahoy Developer Commands
+   */
+
+  /**
+   * Prep a key to be one line using the php container.
+   *
+   * @param string $key
+   *   The key.
+   */
+  public function keyPrep($key) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->setRoots();
+    $key_contents = file_get_contents("$this->projectRoot/$key");
+    $one_line = str_replace(["\r", "\n"], '\\n',
+      $key_contents);
+    $result = $this->taskWriteToFile("$this->projectRoot/env")
+      ->append(TRUE)
+      ->line("SSH_PRIVATE_KEY=$one_line")
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      ->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->io()->success("The key has been processed and appended to the env file.");
+    }
+    else {
+      $this->io()->error('Error message: ' . $result->getMessage());
+    }
+  }
+
+  /**
+   * Execute a drush command in the cli container.
+   *
+   * @param string $sub_command
+   *   The command.
+   */
+  public function drush($sub_command) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker-compose $this->dockerConfig exec cli /var/www/vendor/bin/drush $sub_command")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
+   * Execute a drupal console command in the cli container.
+   *
+   * @param string $sub_command
+   *   The command.
+   */
+  public function drupal($sub_command) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker-compose $this->dockerConfig exec cli /var/www/vendor/bin/drupal $sub_command")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
+   * Execute a gulp command in the front-end container.
+   *
+   * @param string $sub_command
+   *   The command.
+   */
+  public function gulp($sub_command) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker-compose $this->dockerConfig exec front-end node_modules/.bin/gulp $sub_command")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
+   * Execute an npm command in the front-end container.
+   *
+   * @param string $sub_command
+   *   The command.
+   */
+  public function npm($sub_command) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker-compose $this->dockerConfig exec front-end npm $sub_command")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
+   * Tail logs in a docker compose service.
+   *
+   * @param string $service
+   *   The service.
+   */
+  public function log($service) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker-compose $this->dockerConfig logs -f --tail=10 $service")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
+   * Tail logs in a docker compose service.
+   *
+   * @param string $sub_command
+   *   The command.
+   */
+  public function docker($sub_command) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker $this->dockerConfig $sub_command")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
+   * Open a shell in a container.
+   *
+   * @param string $container
+   *   The command.
+   */
+  public function shell($container) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker $this->dockerConfig exec -it $container sh")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
+   * Open a bash shell in a container.
+   *
+   * @param string $container
+   *   The command.
+   */
+  public function bash($container) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker $this->dockerConfig exec -it $container bash")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
+   * Execute an npm command in the front-end container.
+   */
+  public function npmUpdate() {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker-compose $this->dockerConfig exec front-end npm install")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+    $this->taskExec("docker-compose $this->dockerConfig exec front-end npm shrinkwrap")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
+   * Stop the containers.
+   */
+  public function dock() {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->taskExec("docker-compose $this->dockerConfig stop")
+      ->printMetadata(FALSE)
+      ->printOutput(TRUE)
+      ->run();
+  }
+
+  /**
    * Sync the db from a remote server to the docker environment.
    *
    * @param string $environment
