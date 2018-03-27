@@ -1154,6 +1154,8 @@ class RoboFile extends Tasks {
       if ($result instanceof Result && $result->wasSuccessful()) {
         $this->dockerConfig = str_replace(["\r", "\n"], ' ',
           $result->getMessage());
+        $this->dockerConfig = str_replace('-H=', '--host ',
+          $this->dockerConfig);
       }
     }
   }
