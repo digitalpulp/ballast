@@ -62,6 +62,15 @@ services:
     working_dir: /var/www/docroot/
     networks:
       - internal
+    environment:
+      XDEBUG_HOST: {host_ip}
+      PHP_IDE_CONFIG: serverName={site_shortname}.dpulp
+#  solr:
+#    image: wodby/drupal-solr:8-5.5-2.3.0
+#    environment:
+#      SOLR_HEAP: 1024m
+#    networks:
+#      - internal
 volumes:
   db:
 networks:

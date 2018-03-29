@@ -8,12 +8,17 @@
 use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\DrupalKernel;
 
+// Temporary fix.
+// @see https://github.com/drush-ops/drush/issues/3434#issuecomment-370473607
+$_SERVER['PWD'] = DRUPAL_ROOT;
+
 // Acquia configuration.
 if (file_exists('/var/www/site-php')) {
   require '/var/www/site-php/' . $_ENV['AH_SITE_GROUP'] . '/' . $_ENV['AH_SITE_GROUP'] . '-settings.inc';
 }
 // Support for private files on Acquia.
-// See for details: https://docs.acquia.com/articles/setting-private-file-directory-acquia-cloud
+// See for details:
+// https://docs.acquia.com/articles/setting-private-file-directory-acquia-cloud
 $request = Request::createFromGlobals();
 $site_path = DrupalKernel::findSitePath($request);
 $private_path = '/mnt/files/' . $_ENV['AH_SITE_GROUP'] . '.' . $_ENV['AH_SITE_ENVIRONMENT'] . '/' . $site_path . '/files-private';
