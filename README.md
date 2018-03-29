@@ -160,8 +160,7 @@ When installing the given `composer.json` some tasks are taken care of:
   development setup.  Any missing dependencies are installed
   via homebrew. The following are required for Mac:
     * Ahoy
-    * xhyve
-    * xhyve Driver for Docker Machine
+    * VirtualBox
     * Docker
     * Docker Compose
     * pre-commit by Yelp
