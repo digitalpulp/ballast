@@ -120,6 +120,12 @@ Deployment credentials should not be stored in the repo in the clear, but Codesh
 12. Remove or move the key created in step 6 - **do not commit** the private key!
 13. Commit `env.encrypted` to the repo.
 
+### Advanced `ahoy` commands for Tech Leads
+There are some additional commands in the `ahoy.yml` file marked "Advanced" which do
+not appear in response to `ahoy --help`  These are intended for tech leads that may need
+to shell in the docker container for some purpose.
+
+
 ## Install the Project
 ```
 composer install
