@@ -16,9 +16,6 @@ codeship.aes
 id_rsa
 id_rsa.pub
 env
-slack.sh
-slack-db-copy.sh
-slack-code-deploy.sh
 
 # Ignore Drupal's file directory
 /docroot/sites/*/files/
@@ -48,6 +45,8 @@ docroot/console/log
 docker-compose.yml
 services.dev.yml
 !setup/drupal/services.dev.yml
+.ahoy.yml
+!setup/ahoy/*.ahoy.yml
 
 # ahoy/docker managed
 node_modules

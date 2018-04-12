@@ -48,6 +48,8 @@ docroot/console/log
 docker-compose.yml
 services.dev.yml
 !setup/drupal/services.dev.yml
+.ahoy.yml
+!setup/ahoy/*.ahoy.yml
 
 # ahoy/docker managed
 node_modules

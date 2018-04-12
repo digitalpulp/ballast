@@ -115,6 +115,19 @@ class RoboFile extends Tasks {
    */
   public function setupMac() {
     $this->io()->title('Mac Setup for Ballast');
+    $this->setRoots();
+    $result = $this->taskFilesystemStack()
+      ->copy($this->projectRoot . '/setup/ahoy/mac.ahoy.yml', $this->projectRoot . '/.ahoy.yml')
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      ->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->io()->text('Ahoy commands prepared.');
+    }
+    else {
+      $this->io()->error('Unable to move ahoy.yml file into place.');
+      $this->io()->text('Error is:');
+      $this->io()->text($result->getMessage());
+    }
     $this->taskExec('brew update')
       ->printOutput(FALSE)
       ->printMetadata(FALSE);
