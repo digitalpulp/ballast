@@ -49,28 +49,11 @@
         "sort-packages": true
     },
     "autoload": {
+        "psr-4": {
+          "Ballast\\": "scripts/robo/src"
+        },
         "classmap": [
             "scripts/composer/ScriptHandler.php"
-        ]
-    },
-    "scripts": {
-        "drupal-scaffold": "DrupalComposer\\DrupalScaffold\\Plugin::scaffold",
-        "robo": "robo --ansi --load-from $(pwd)/scripts/robo",
-        "pre-install-cmd": [
-            "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
-        ],
-        "pre-update-cmd": [
-            "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
-        ],
-        "post-install-cmd": [
-            "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
-            "composer robo setup:drupal",
-            "composer robo setup:prerequisites"
-        ],
-        "post-update-cmd": [
-            "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
-            "composer robo setup:drupal",
-            "composer robo setup:prerequisites"
         ]
     },
     "extra": {
