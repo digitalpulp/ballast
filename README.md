@@ -102,14 +102,13 @@ Deployment credentials should not be stored in the repo in the clear, but Codesh
 5. Create a new file named `env` (Both this file and `codeship.aes` are
    set to be ignored by git).
 6. Copy or create a private key that matches the public key installed in
-   your target git remote to the project root.
+   your target git remote to the project root or to a `/keys` directory in the project.
 7. Use the ahoy commands to bring up the local project.
-8. Use advanced command `ahoy key-prep private_key` to get your private
-   key in a one-line format
+8. Use advanced command `ahoy key-prep path/to/private_key` to get your private
+   key in a one-line format and appended to the `env` file.
 9. Execute `ssh user@git_remote_url` if you have not accessed this git
    remote before to add the remote to your `~/.ssh/known_hosts`.
-10. Define the environment variables in `env` copying the one line
-    private key, the appropriate line from `~/.ssh/known_hosts`, and the
+10. Define the environment variables in `env` copying the appropriate line from `~/.ssh/known_hosts`, and the
     name and email to use when commiting the build like this:
     ```
     SSH_PRIVATE_KEY=one-line-key copied from the terminal
@@ -120,6 +119,12 @@ Deployment credentials should not be stored in the repo in the clear, but Codesh
 11. [Encrypt](https://documentation.codeship.com/pro/builds-and-configuration/environment-variables/#encrypted-environment-variables) the file using Jet: `jet encrypt env env.encrypted`
 12. Remove or move the key created in step 6 - **do not commit** the private key!
 13. Commit `env.encrypted` to the repo.
+
+### Advanced `ahoy` commands for Tech Leads
+There are some additional commands in the `ahoy.yml` file marked "Advanced" which do
+not appear in response to `ahoy --help`  These are intended for tech leads that may need
+to shell in the docker container for some purpose.
+
 
 ## Install the Project
 ```
@@ -155,8 +160,7 @@ When installing the given `composer.json` some tasks are taken care of:
   development setup.  Any missing dependencies are installed
   via homebrew. The following are required for Mac:
     * Ahoy
-    * xhyve
-    * xhyve Driver for Docker Machine
+    * VirtualBox
     * Docker
     * Docker Compose
     * pre-commit by Yelp

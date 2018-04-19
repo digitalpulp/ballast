@@ -115,6 +115,19 @@ class RoboFile extends Tasks {
    */
   public function setupMac() {
     $this->io()->title('Mac Setup for Ballast');
+    $this->setRoots();
+    $result = $this->taskFilesystemStack()
+      ->copy($this->projectRoot . '/setup/ahoy/mac.ahoy.yml', $this->projectRoot . '/.ahoy.yml')
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      ->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->io()->text('Ahoy commands prepared.');
+    }
+    else {
+      $this->io()->error('Unable to move ahoy.yml file into place.');
+      $this->io()->text('Error is:');
+      $this->io()->text($result->getMessage());
+    }
     $this->taskExec('brew update')
       ->printOutput(FALSE)
       ->printMetadata(FALSE);
@@ -560,6 +573,43 @@ class RoboFile extends Tasks {
       }
       $this->io()
         ->success('The site can now be reached at ' . $this->configuration['site_shortname'] . '.dpulp/');
+    }
+  }
+
+  /**
+   * @defgroup ahoy Developer Commands
+   */
+
+  /**
+   * Prep a key to be one line using the php container.
+   *
+   * @param string $key
+   *   The key.
+   */
+  public function keyPrep($key) {
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacDockerEnv();
+        break;
+
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.");
+    }
+    $this->setRoots();
+    $key_contents = file_get_contents("$this->projectRoot/$key");
+    $one_line = str_replace(["\r", "\n"], '\\n',
+      $key_contents);
+    $result = $this->taskWriteToFile("$this->projectRoot/env")
+      ->append(TRUE)
+      ->line("SSH_PRIVATE_KEY=$one_line")
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      ->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->io()->success("The key has been processed and appended to the env file.");
+    }
+    else {
+      $this->io()->error('Error message: ' . $result->getMessage());
     }
   }
 
@@ -1154,6 +1204,8 @@ class RoboFile extends Tasks {
       if ($result instanceof Result && $result->wasSuccessful()) {
         $this->dockerConfig = str_replace(["\r", "\n"], ' ',
           $result->getMessage());
+        $this->dockerConfig = str_replace('-H=', '--host ',
+          $this->dockerConfig);
       }
     }
   }

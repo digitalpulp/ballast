@@ -18,7 +18,7 @@ commands:
     hide: true
   key-prep:
     usage: Process private key to one-liner [Advanced users only]
-    cmd: docker-compose $(docker-machine config dp-docker) exec php sed -E ':a;N;$!ba;s/\r?\n/\\n/g' /var/www/"$@"
+    cmd: ahoy robo "key:prep" "$@"
     hide: true
   log:
     usage: Tail a service log. Specify one of [database, php, web, front-end, cli]
