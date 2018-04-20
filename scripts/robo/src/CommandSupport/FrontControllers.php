@@ -27,7 +27,7 @@ use Symfony\Component\Console\Input\InputOption;
 /**
  * Class RoboFile for Ballast.
  */
-class RoboFile extends Tasks {
+class FrontControllers extends Tasks {
 
   /**
    * Config Utility (setter injected).

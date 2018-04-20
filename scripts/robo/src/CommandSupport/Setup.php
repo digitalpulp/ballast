@@ -177,69 +177,70 @@ class Setup extends Tasks{
       // This is a prod build, this all should be in the repo.
       return;
     }
-    $this->setRoots();
-    $this->getConfig();
-    $this->taskFilesystemStack()->chmod("$this->drupalRoot/sites/default", 0755)
+    // Set some simple variables for string expansion.
+    $drupal = $this->config->getDrupalRoot();
+    $project = $this->config->getProjectRoot();
+    $this->taskFilesystemStack()->chmod("$drupal/sites/default", 0755)
       ->run();
     $this->taskFilesystemStack()
-      ->chmod("$this->drupalRoot/sites/default/settings.php", 0755)
+      ->chmod("$drupal/sites/default/settings.php", 0755)
       ->run();
     $collection = $this->collectionBuilder();
     $collection->addTask(
       $this->taskFilesystemStack()
-        ->copy("$this->projectRoot/setup/drupal/settings.acquia.php",
-          "$this->drupalRoot/sites/default/settings.acquia.php", TRUE)
+        ->copy("$project/setup/drupal/settings.acquia.php",
+          "$drupal/sites/default/settings.acquia.php", TRUE)
     )->rollback(
       $this->taskFilesystemStack()
-        ->remove("$this->drupalRoot/sites/default/settings.acquia.php")
+        ->remove("$drupal/sites/default/settings.acquia.php")
     );
     $collection->addTask(
       $this->taskFilesystemStack()
-        ->copy("$this->projectRoot/setup/drupal/settings.non-acquia.php",
-          "$this->drupalRoot/sites/default/settings.non-acquia.php", TRUE)
+        ->copy("$project/setup/drupal/settings.non-acquia.php",
+          "$drupal/sites/default/settings.non-acquia.php", TRUE)
     )->rollback(
       $this->taskFilesystemStack()
-        ->remove("$this->drupalRoot/sites/default/settings.non-acquia.php")
+        ->remove("$drupal/sites/default/settings.non-acquia.php")
     );
     $collection->addTask(
       $this->taskFilesystemStack()
-        ->copy("$this->projectRoot/setup/drupal/settings.local.php",
-          "$this->drupalRoot/sites/default/settings.local.php", TRUE)
+        ->copy("$project/setup/drupal/settings.local.php",
+          "$drupal/sites/default/settings.local.php", TRUE)
     )->rollback(
       $this->taskFilesystemStack()
-        ->remove("$this->drupalRoot/sites/default/settings.local.php")
+        ->remove("$drupal/sites/default/settings.local.php")
     );
     $collection->addTask(
       $this->taskFilesystemStack()
-        ->copy("$this->projectRoot/setup/drupal/services.dev.yml",
-          "$this->drupalRoot/sites/default/services.dev.yml", TRUE)
+        ->copy("$project/setup/drupal/services.dev.yml",
+          "$drupal/sites/default/services.dev.yml", TRUE)
     )->rollback(
       $this->taskFilesystemStack()
-        ->remove("$this->drupalRoot/sites/default/services.dev.yml")
+        ->remove("$drupal/sites/default/services.dev.yml")
     );
     $collection->addTask(
-      $this->taskReplaceInFile("$this->drupalRoot/sites/default/settings.local.php")
+      $this->taskReplaceInFile("$drupal/sites/default/settings.local.php")
         ->from('{site_shortname}')
-        ->to($this->configuration['site_shortname'])
+        ->to($this->config->get('site_shortname'))
     );
     $collection->addTask(
-      $this->taskReplaceInFile("$this->drupalRoot/sites/default/settings.local.php")
+      $this->taskReplaceInFile("$drupal/sites/default/settings.local.php")
         ->from('{site_proxy_origin_url}')
-        ->to($this->configuration['site_proxy_origin_url'])
+        ->to($this->config->get('site_proxy_origin_url'))
     );
-    if (file_exists("$this->drupalRoot/sites/default/settings.php") &&
+    if (file_exists("$drupal/sites/default/settings.php") &&
       !preg_match(
         '|\/\*\sSettings added by robo setup:drupal|',
-        file_get_contents("$this->drupalRoot/sites/default/settings.php")
+        file_get_contents("$drupal/sites/default/settings.php")
       )
     ) {
       $collection->addTask(
         $this->taskConcat(
           [
-            "$this->drupalRoot/sites/default/settings.php",
-            "$this->projectRoot/setup/drupal/settings.append.php",
+            "$drupal/sites/default/settings.php",
+            "$project/setup/drupal/settings.append.php",
           ]
-        )->to("$this->drupalRoot/sites/default/settings.php")
+        )->to("$drupal/sites/default/settings.php")
       );
     }
     $result = $collection->run();
