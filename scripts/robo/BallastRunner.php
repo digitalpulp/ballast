@@ -1,4 +1,6 @@
 <?php
+$root_directory = dirname(__FILE__, 3);
+require_once $root_directory . '/vendor/autoload.php';
 
 use Consolidation\AnnotatedCommand\CommandFileDiscovery;
 

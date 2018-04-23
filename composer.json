@@ -58,7 +58,7 @@
     },
     "scripts": {
         "drupal-scaffold": "DrupalComposer\\DrupalScaffold\\Plugin::scaffold",
-        "robo": "robo --ansi --load-from $(pwd)/scripts/robo",
+        "robo": "@php scripts/robo/BallastRunner.php --ansi",
         "pre-install-cmd": [
             "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
         ],
