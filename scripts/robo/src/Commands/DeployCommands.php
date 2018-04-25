@@ -1,15 +1,22 @@
 <?php
 
-namespace Ballast\CommandSupport;
+namespace Ballast\Commands;
 
 use Robo\Tasks;
 use Robo\Result;
 use Robo\Contract\VerbosityThresholdInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Ballast\Utilities\Config;
 use Symfony\Component\Finder\Finder;
 
+/**
+ * Robo commands that manage deployment.
+ *
+ * @package Ballast\Commands
+ */
+class DeployCommands extends Tasks {
 
-class Deploy extends Tasks {
+  use FrontEndTrait;
 
   /**
    * Config Utility (setter injected).
@@ -19,28 +26,115 @@ class Deploy extends Tasks {
   protected $config;
 
   /**
-   * Startup Command support object (setter injected).
+   * Builds separate artifact and pushes to remote defined in $DEPLOY_TARGET.
    *
-   * @var \Ballast\CommandSupport\StartUp
-   */
-  protected $startUp;
-
-  /**
-   * Set the config utility object.
+   * If the tag parameter is set, deploy:tag is called, otherwise deploy:branch.
    *
-   * @param \Ballast\Utilities\Config $config
+   * @param array $options
+   *   Options from the command line.
+   *
+   * @aliases deploy
+   *
+   * @throws \Exception
+   *   Throws an exception if the deployment fails.
    */
-  public function setConfig(Config $config) {
-    $this->config = $config;
+  public function deployBuild(array $options = [
+    'branch' => NULL,
+    'tag' => NULL,
+    'commit-msg' => NULL,
+    'remote-branch' => NULL,
+    'remote' => NULL,
+    'build_id' => NULL,
+  ]) {
+    if (!empty($options['tag'])) {
+      $result = $this->deployTag($options);
+    }
+    else {
+      $result = $this->deployBranch($options);
+    }
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->io()
+        ->success('Deployment succeeded.');
+    }
+    else {
+      throw new Exception('Deployment failed.');
+    }
   }
 
   /**
-   * Set the StartUp command support object
+   * Builds separate artifact and pushes as a tag.
    *
-   * @param \Ballast\CommandSupport\StartUp $startUp
+   * @param array $options
+   *   Options from the command line or internal call.
+   *
+   * @return \Robo\Result
+   *   The result of the final push.
    */
-  public function setStartUp($startUp) {
-    $this->startUp = $startUp;
+  public function deployTag(array $options = [
+    'branch' => InputOption::VALUE_REQUIRED,
+    'tag' => InputOption::VALUE_REQUIRED,
+    'commit-msg' => InputOption::VALUE_REQUIRED,
+    'remote-branch' => NULL,
+    'remote' => NULL,
+    'build_id' => NULL,
+  ]) {
+    $this->setConfig();
+    $this->setDeploymentOptions($options);
+    if (empty($options['tag'])) {
+      // Excess of caution to be sure we have a tag - should never be here.
+      $options['tag'] = $options['branch'] . '-' . time();
+      if (!empty($options['build_id'])) {
+        // If we have a build ID make a better tag.
+        $options['tag'] = $options['branch'] . '-' . $options['build_id'];
+      }
+    }
+    $this->say('Deploying to tag ' . $options['tag']);
+    $this->setDeploymentVersionControl($options);
+    $this->getDeploymentDependencies();
+    $this->getSanitizedBuild();
+    $this->setDeploymentCommit($options);
+    $this->setCleanMerge($options);
+    return $this->getPushResult($options);
+  }
+
+  /**
+   * Builds separate artifact and pushes to remote as a branch.
+   *
+   * @param array $options
+   *   Options from the command line or internal call.
+   *
+   * @return \Robo\Result
+   *   The result of the final push.
+   */
+  public function deployBranch(array $options = [
+    'branch' => InputOption::VALUE_REQUIRED,
+    'commit-msg' => InputOption::VALUE_REQUIRED,
+    'remote-branch' => NULL,
+    'remote' => NULL,
+    'build_id' => NULL,
+  ]) {
+    $this->setConfig();
+    $this->setDeploymentOptions($options);
+    $this->say('Deploying to branch ' . $options['branch']);
+    $this->setDeploymentVersionControl($options);
+    $this->getDeploymentDependencies();
+    $this->getSanitizedBuild();
+    $this->setDeploymentCommit($options);
+    $this->setCleanMerge($options);
+    return $this->getPushResult($options);
+  }
+
+  /**
+   * All the methods that follow are protected helper methods.
+   */
+
+  /**
+   * Singleton manager for Ballast\Utilities\Config.
+   */
+  protected function setConfig() {
+    if (!$this->config instanceof Config) {
+      $this->config = new Config();
+    }
   }
 
   /**
@@ -49,8 +143,8 @@ class Deploy extends Tasks {
    * @param array $options
    *   Options passed from the command.
    */
-  public function setDeploymentOptions(array &$options) {
-    $options['remote'] = isset($options['remote']) ? $options['remote'] :getenv('DEPLOY_TARGET');
+  protected function setDeploymentOptions(array &$options) {
+    $options['remote'] = isset($options['remote']) ? $options['remote'] : getenv('DEPLOY_TARGET');
     $options['branch'] = isset($options['branch']) ? $options['branch'] : getenv('CI_BRANCH');
     $options['remote-branch'] = isset($options['remote-branch']) ? $options['remote-branch'] : $options['branch'];
     $options['deploy-branch'] = $options['remote-branch'] . '-deploy';
@@ -85,7 +179,7 @@ class Deploy extends Tasks {
    * @throws \Exception
    *   Throws an exception if the git tasks fail so that deployment will abort.
    */
-  public function setDeploymentVersionControl(array $options) {
+  protected function setDeploymentVersionControl(array $options) {
     // Get from value set via codeship env.encrypted or other means.
     /* https://documentation.codeship.com/pro/builds-and-configuration/environment-variables/#encrypted-environment-variables */
     $git_name = getenv('GIT_NAME') ? getenv('GIT_NAME') : 'Deployment';
@@ -143,7 +237,7 @@ class Deploy extends Tasks {
   /**
    * Function waits until front-end signals init is complete.
    */
-  public function getDeploymentDependencies() {
+  protected function getDeploymentDependencies() {
     $ready = FALSE;
     $building = FALSE;
     $compiling = FALSE;
@@ -182,7 +276,7 @@ class Deploy extends Tasks {
    * @throws \Exception
    *   Throws an exception if the files are unable to be modified.
    */
-  public function getSanitizedBuild() {
+  protected function getSanitizedBuild() {
     $this->say('Sanitizing artifact...');
     $this->say('Finding .git subdirectories...');
     $git = new Finder();
@@ -246,7 +340,7 @@ class Deploy extends Tasks {
    * @throws \Exception
    *   Throws an exception if the git tasks fail so that deployment will abort.
    */
-  public function setDeploymentCommit(array $options) {
+  protected function setDeploymentCommit(array $options) {
     $gitJobs = $this->taskGitStack()
       ->stopOnFail()
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
@@ -273,8 +367,8 @@ class Deploy extends Tasks {
    *
    * @see https://stackoverflow.com/questions/173919/is-there-a-theirs-version-of-git-merge-s-ours/4969679#4969679
    */
-  public function setCleanMerge(array $options) {
-    // We need some simple variables for expansion in a string
+  protected function setCleanMerge(array $options) {
+    // We need some simple variables for expansion in a string.
     $remote = $options['remote_name'];
     $target = $remote . '/' . $options['remote-branch'];
     $message = 'Merge to remote: ' . $options['commit-msg'];
@@ -327,7 +421,7 @@ class Deploy extends Tasks {
    * @return \Robo\Result
    *   The final task result.
    */
-  public function getPushResult(array $options) {
+  protected function getPushResult(array $options) {
     $gitJobs = $this->taskGitStack()
       ->stopOnFail()
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)

@@ -1,21 +1,21 @@
 <?php
 
-namespace Ballast\Utilities;
+namespace Ballast\Commands;
 
 use Robo\Tasks;
 use Robo\Result;
 use Robo\Contract\VerbosityThresholdInterface;
-
+use Ballast\Utilities\Config;
 
 /**
- * Class RemoteRebuild
+ * Robo command that manages rebuilding from a remote environment.
  *
- * @package Ballast\Utilities
+ * @package Ballast\Commands
  */
-class RemoteRebuild extends Tasks {
+class RemoteRebuildCommands extends Tasks {
 
   /**
-   * Config Utility (setter injected).
+   * Config Utility (singleton).
    *
    * @var \Ballast\Utilities\Config
    */
@@ -23,35 +23,29 @@ class RemoteRebuild extends Tasks {
 
 
   /**
+   * Contains docker config flags.
+   *
    * @var string
-   *   Contains docker config flags.
    */
   protected $dockerFlags;
 
   /**
-   * The config utility object.
-   *
-   * @param \Ballast\Utilities\Config $config
-   */
-  public function setConfig(Config $config) {
-    $this->config = $config;
-  }
-
-  /**
-   * The main method: executes the rebuild.
+   * Rebuilds the local site from a remote server.
    *
    * @param string $environment
    *   The environment suffix for the drush alias.
+   *
+   * @aliases rebuild
    */
-  public function execute($environment = 'dev') {
-    $this->init();
+  public function rebuildSite($environment = 'dev') {
+    $this->setInitialConditions();
     $target = $this->config->get('site_alias_name') . '.' . $environment;
-    if ($this->dump($target)) {
+    if ($this->getRemoteDump($target)) {
       $this->io()->text('Remote database dumped.');
       // The following methods throw a \RuntimeException on failure.
-      $this->import();
-      $this->update();
-      $this->themeRebuild();
+      $this->getImport();
+      $this->getUpdate();
+      $this->getRebuiltTheme();
       $this->io()->success("Local site rebuilt from $environment");
     }
     else {
@@ -61,9 +55,10 @@ class RemoteRebuild extends Tasks {
   }
 
   /**
-   * Initialize parameters.
+   * Initialize parameters and services.
    */
-  protected function init() {
+  protected function setInitialConditions() {
+    $this->setConfig();
     $this->dockerFlags = '';
     switch (php_uname('s')) {
       case 'Darwin':
@@ -77,8 +72,7 @@ class RemoteRebuild extends Tasks {
   }
 
   /**
-   * Dump the remote database from the host so we don't have to mess with ssh
-   * keys.
+   * Dump the remote database from the host, avoids messing with ssh keys.
    *
    * @param string $target
    *   The full drush alias of the target remote.
@@ -86,7 +80,7 @@ class RemoteRebuild extends Tasks {
    * @return bool
    *   Success of the dump.
    */
-  protected function dump($target) {
+  protected function getRemoteDump($target) {
     $root = $this->config->getProjectRoot();
     $this->io()->text('Dumping remote database');
     $dumpRemote = $this->collectionBuilder();
@@ -109,7 +103,7 @@ class RemoteRebuild extends Tasks {
   /**
    * Import the dump into the docker managed database.
    */
-  protected function import() {
+  protected function getImport() {
     $this->io()->newLine();
     $this->io()->text('Loading remote dump to local database.');
     $loadRemote = $this->collectionBuilder();
@@ -145,7 +139,7 @@ class RemoteRebuild extends Tasks {
   /**
    * Run update hooks and import local config.
    */
-  protected function update() {
+  protected function getUpdate() {
     $this->io()->newLine();
     $this->io()->text('Running database updates and importing config.');
     $updateResult = $this->taskExec("docker-compose $this->dockerFlags exec cli drush -y updb")
@@ -182,10 +176,10 @@ class RemoteRebuild extends Tasks {
   /**
    * Rebuild the theme.
    */
-  protected function themeRebuild() {
+  protected function getRebuiltTheme() {
     $this->io()->newLine();
     $this->io()->text('Building the theme.');
-    $gulpResult = $this->taskExec("docker-compose $dockerFlags exec -T front-end node_modules/.bin/gulp build")
+    $gulpResult = $this->taskExec("docker-compose $this->dockerFlags exec -T front-end node_modules/.bin/gulp build")
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
     if ($gulpResult instanceof Result && $gulpResult->wasSuccessful()) {
@@ -196,6 +190,15 @@ class RemoteRebuild extends Tasks {
       $this->io()->newLine();
       $this->io()->text($gulpResult->getMessage());
       throw new \RuntimeException();
+    }
+  }
+
+  /**
+   * Singleton manager for Ballast\Utilities\Config.
+   */
+  protected function setConfig() {
+    if (!$this->config instanceof Config) {
+      $this->config = new Config();
     }
   }
 

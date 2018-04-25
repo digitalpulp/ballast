@@ -1,6 +1,6 @@
 <?php
 
-namespace Ballast\CommandSupport;
+namespace Ballast\Commands;
 
 use Robo\Tasks;
 use Robo\Result;
@@ -8,163 +8,61 @@ use Robo\Contract\VerbosityThresholdInterface;
 use Ballast\Utilities\Config;
 use UnexpectedValueException;
 
-class Setup extends Tasks{
+/**
+ * Robo commands that manage setup.
+ *
+ * @package Ballast\Commands
+ */
+class SetupCommands extends Tasks {
 
   /**
-   * Config Utility (setter injected).
+   * Config Utility (singleton).
    *
    * @var \Ballast\Utilities\Config
    */
   protected $config;
 
   /**
-   * Robo Command for MacOS Initial setup.
-   *
-   * @ingroup setup
+   * Dispatches prerequisite setup tasks by OS.
    */
-  public function setupMac() {
-    $this->io()->title('Mac Setup for Ballast');
-    $result = $this->taskFilesystemStack()
-      ->copy($this->config->getProjectRoot() . '/setup/ahoy/mac.ahoy.yml', $this->config->getProjectRoot() . '/.ahoy.yml')
-      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-      ->run();
-    if ($result instanceof Result && $result->wasSuccessful()) {
-      $this->io()->text('Ahoy commands prepared.');
-    }
-    else {
-      $this->io()->error('Unable to move ahoy.yml file into place.');
-      $this->io()->text('Error is:');
-      $this->io()->text($result->getMessage());
-    }
-    $this->taskExec('brew update')
-      ->printOutput(FALSE)
-      ->printMetadata(FALSE);
-    $prereqs = $this->getPrerequisites('mac');
-    $this->io()->section('Check for Prerequisites');
-    $ready = TRUE;
-    foreach ($prereqs as $short_name => $full_name) {
-      if (!$this->getIsInstalled($short_name)) {
-        $this->io()
-          ->error($full_name . " is not available.  Check the project README for preconditions and instructions.");
-        $ready = FALSE;
-      }
-    }
-    if (!$ready) {
-      // Stop setup so the user can prepare the Mac.
+  public function setupPrerequisites() {
+    $isDev = getenv('COMPOSER_DEV_MODE');
+    if (!$isDev) {
+      // This is a production build - do not build the local dev environment.
       return;
     }
-    $required = $this->getRequirements('mac');
-    if (count($required) > 0) {
-      $this->io()->text('The following packages need to be installed:');
-      $this->io()->listing(array_column($required, 'name'));
-      $collection = $this->collectionBuilder();
-      foreach ($required as $package => $settings) {
-        $collection->progressMessage('Installing ' . $settings['name']);
-        if (!empty($settings['tap'])) {
-          $collection->addTask(
-            $this->taskExec('brew tap ' . $settings['tap'])
-          )->rollback(
-            $this->taskExec('brew untap ' . $settings['tap'])
-          );
-        }
-        $collection->addTask(
-          $this->taskExec('brew ' . ($settings['cask'] ? 'cask ' : '') . 'install ' . $package)
-        )->rollback(
-          $this->taskExec('brew ' . ($settings['cask'] ? 'cask ' : '') . "uninstall $package")
-        );
-      }
+    $this->setConfig();
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->setMacRequirements();
+        $this->setPrecommitHooks();
+        $this->io()->title("Next Steps");
+        $this->io()
+          ->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
+        $this->io()
+          ->note('All the docker projects need to be in the same parent folder.  Because of the nature of NFS, this folder cannot contain any older vagrant based projects. If needed, create a directory and move this project before continuing.');
+        $this->io()
+          ->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
+        $this->io()->listing([
+          'ahoy harbor',
+          'ahoy cast-off',
+          'ahoy rebuild',
+        ]);
+        $this->io()->newLine();
+        $this->io()
+          ->text('If you have previously installed Ballast on this machine you are now ready to cast-off and launch.');
+        $this->io()
+          ->text('To launch this Drupal site, use the following commands:');
+        $this->io()->listing([
+          'ahoy cast-off (Only needed once after starting up your Mac.)',
+          'ahoy launch (`ahoy cast-off` will call this for you)',
+          'ahoy rebuild',
+        ]);
+        break;
 
-      $result = $collection->run();
-    }
-    if ((isset($result) && $result instanceof Result && $result->wasSuccessful())) {
-      $this->io->success("Prerequisites prepared for Ballast.");
-    }
-    elseif (count($required) == 0) {
-      $this->io->success("Your Mac was already prepared for Ballast.");
-    }
-    else {
-      $this->io()
-        ->error("Something went wrong.  Changes have been rolled back.");
-    }
-  }
-
-  /**
-   * Install pre-commit hooks.
-   */
-  public function setupPrecommit() {
-    $root = $this->config->getProjectRoot();
-    $this->io()->section('Configuring pre-commit linting tool.');
-    $collection = $this->collectionBuilder();
-    $collection->addTask(
-      $this->taskExec('pre-commit install')->dir($this->config->getProjectRoot())
-    )->rollback(
-      $this->taskExec('pre-commit uninstall')
-        ->dir($this->projectRoot)
-    );
-    if (!file_exists("$root/.git/hooks/commit-msg")) {
-      $collection->addTask(
-        $this->taskFilesystemStack()
-          ->copy("$root/scripts/git/commit-msg-template",
-            "$root/scripts/git/commit-msg")
-      )->rollback(
-        $this->taskFilesystemStack()
-          ->remove("$root/scripts/git/commit-msg")
-      );
-      $collection->addTask(
-        $this->taskReplaceInFile("$root/scripts/git/commit-msg")
-          ->from('{key}')
-          ->to($this->config->get('jira_project_key'))
-      );
-      $collection->addTask(
-        $this->taskFilesystemStack()
-          ->rename("$root/scripts/git/commit-msg",
-            "$root/.git/hooks/commit-msg")
-      );
-    }
-    $result = $collection->run();
-    if ($result instanceof Result && $result->wasSuccessful()) {
-      $this->io->success("Hooks for commit-msg and pre-commit linting have been installed.");
-    }
-    else {
-      $this->io()
-        ->error("Something went wrong.  Changes have been rolled back.");
-    }
-  }
-
-  /**
-   * Setup the http-proxy service with dns for macOS.
-   */
-  public function setupDnsMac() {
-    if ($this->getDockerMachineIp()) {
-      $this->io()->title('Setup HTTP Proxy and .dp domain resolution.');
-      // Boot the DNS service.
-      $this->setMacDockerEnv();
-      // @see https://hub.docker.com/r/jwilder/nginx-proxy/
-      $boot_task = $this->collectionBuilder();
-      $boot_task->addTask(
-        $this->taskExec("docker $this->dockerConfig network create proxynet")
-      )->rollback(
-        $this->taskExec("docker $this->dockerConfig network prune")
-      );
-      $command = "docker $this->dockerConfig run";
-      $command .= ' -d -v /var/run/docker.sock:/tmp/docker.sock:ro';
-      $command .= ' -p 80:80 --restart always --network proxynet';
-      $command .= ' --name http-proxy digitalpulp/nginx-proxy';
-      $boot_task->addTask(
-        $this->taskExec($command)
-      )->rollback(
-        $this->taskExec("docker $this->dockerConfig rm http-proxy")
-      );
-      $boot_task->addTask(
-        $this->taskExec('docker-machine stop dp-docker')
-      );
-      $result = $boot_task->run();
-      if ($result instanceof Result && $result->wasSuccessful()) {
-        $this->io()->success('Proxy container is setup.');
-      }
-    }
-    else {
-      $this->io()->error('Unable to get an IP address for dp-docker machine.');
+      default:
+        $this->io()
+          ->error("Unable to determine your operating system.  Manual installation will be required.");
     }
   }
 
@@ -177,6 +75,7 @@ class Setup extends Tasks{
       // This is a prod build, this all should be in the repo.
       return;
     }
+    $this->setConfig();
     // Set some simple variables for string expansion.
     $drupal = $this->config->getDrupalRoot();
     $project = $this->config->getProjectRoot();
@@ -250,12 +149,156 @@ class Setup extends Tasks{
   }
 
   /**
-   * The config utility object.
+   * Prep a key to be one line using the php container.
    *
-   * @param \Ballast\Utilities\Config $config
+   * @param string $key
+   *   The key.
    */
-  public function setConfig(Config $config) {
-    $this->config = $config;
+  public function keyPrep($key) {
+    $this->setConfig();
+    $root = $this->config->getProjectRoot();
+    $key_contents = file_get_contents("$root/$key");
+    $one_line = str_replace(["\r", "\n"], '\\n',
+      $key_contents);
+    $result = $this->taskWriteToFile("$root/env")
+      ->append(TRUE)
+      ->line("SSH_PRIVATE_KEY=$one_line")
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      ->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->io()
+        ->success("The key has been processed and appended to the env file.");
+    }
+    else {
+      $this->io()->error('Error message: ' . $result->getMessage());
+    }
+  }
+
+  /**
+   * All the methods that follow are protected helper methods.
+   */
+
+  /**
+   * Singleton manager for Ballast\Utilities\Config.
+   */
+  protected function setConfig() {
+    if (!$this->config instanceof Config) {
+      $this->config = new Config();
+    }
+  }
+
+  /**
+   * MacOS Initial setup.
+   */
+  protected function setMacRequirements() {
+    $this->setConfig();
+    $this->io()->title('Mac Setup for Ballast');
+    $result = $this->taskFilesystemStack()
+      ->copy($this->config->getProjectRoot() . '/setup/ahoy/mac.ahoy.yml', $this->config->getProjectRoot() . '/.ahoy.yml')
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      ->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->io()->text('Ahoy commands prepared.');
+    }
+    else {
+      $this->io()->error('Unable to move ahoy.yml file into place.');
+      $this->io()->text('Error is:');
+      $this->io()->text($result->getMessage());
+    }
+    $this->taskExec('brew update')
+      ->printOutput(FALSE)
+      ->printMetadata(FALSE);
+    $prereqs = $this->getPrerequisites('mac');
+    $this->io()->section('Check for Prerequisites');
+    $ready = TRUE;
+    foreach ($prereqs as $short_name => $full_name) {
+      if (!$this->getIsInstalled($short_name)) {
+        $this->io()
+          ->error($full_name . " is not available.  Check the project README for preconditions and instructions.");
+        $ready = FALSE;
+      }
+    }
+    if (!$ready) {
+      // Stop setup so the user can prepare the Mac.
+      return;
+    }
+    $required = $this->getRequirements('mac');
+    if (count($required) > 0) {
+      $this->io()->text('The following packages need to be installed:');
+      $this->io()->listing(array_column($required, 'name'));
+      $collection = $this->collectionBuilder();
+      foreach ($required as $package => $settings) {
+        $collection->progressMessage('Installing ' . $settings['name']);
+        if (!empty($settings['tap'])) {
+          $collection->addTask(
+            $this->taskExec('brew tap ' . $settings['tap'])
+          )->rollback(
+            $this->taskExec('brew untap ' . $settings['tap'])
+          );
+        }
+        $collection->addTask(
+          $this->taskExec('brew ' . ($settings['cask'] ? 'cask ' : '') . 'install ' . $package)
+        )->rollback(
+          $this->taskExec('brew ' . ($settings['cask'] ? 'cask ' : '') . "uninstall $package")
+        );
+      }
+
+      $result = $collection->run();
+    }
+    if ((isset($result) && $result instanceof Result && $result->wasSuccessful())) {
+      $this->io->success("Prerequisites prepared for Ballast.");
+    }
+    elseif (count($required) == 0) {
+      $this->io->success("Your Mac was already prepared for Ballast.");
+    }
+    else {
+      $this->io()
+        ->error("Something went wrong.  Changes have been rolled back.");
+    }
+  }
+
+  /**
+   * Install pre-commit hooks.
+   */
+  protected function setPrecommitHooks() {
+    $this->setConfig();
+    $root = $this->config->getProjectRoot();
+    $this->io()->section('Configuring pre-commit linting tool.');
+    $collection = $this->collectionBuilder();
+    $collection->addTask(
+      $this->taskExec('pre-commit install')->dir($this->config->getProjectRoot())
+    )->rollback(
+      $this->taskExec('pre-commit uninstall')
+        ->dir($root)
+    );
+    if (!file_exists("$root/.git/hooks/commit-msg")) {
+      $collection->addTask(
+        $this->taskFilesystemStack()
+          ->copy("$root/scripts/git/commit-msg-template",
+            "$root/scripts/git/commit-msg")
+      )->rollback(
+        $this->taskFilesystemStack()
+          ->remove("$root/scripts/git/commit-msg")
+      );
+      $collection->addTask(
+        $this->taskReplaceInFile("$root/scripts/git/commit-msg")
+          ->from('{key}')
+          ->to($this->config->get('jira_project_key'))
+      );
+      $collection->addTask(
+        $this->taskFilesystemStack()
+          ->rename("$root/scripts/git/commit-msg",
+            "$root/.git/hooks/commit-msg")
+      );
+    }
+    $result = $collection->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->io->success("Hooks for commit-msg and pre-commit linting have been installed.");
+    }
+    else {
+      $this->io()
+        ->error("Something went wrong.  Changes have been rolled back.");
+    }
   }
 
   /**
@@ -383,6 +426,5 @@ class Setup extends Tasks{
         return [];
     }
   }
-
 
 }
