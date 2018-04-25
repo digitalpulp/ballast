@@ -125,6 +125,7 @@ class DockerCommands extends Tasks {
    * @aliases boot
    */
   public function bootDocker() {
+    $this->setConfig();
     switch (php_uname('s')) {
       case 'Darwin':
         $home = getenv('HOME');
