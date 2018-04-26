@@ -15,7 +15,7 @@ use UnexpectedValueException;
  */
 class DockerCommands extends Tasks {
 
-  use FrontEndTrait;
+  use FrontEndTrait, DockerMachineTrait;
 
   /**
    * Config Utility (setter injected).
@@ -227,8 +227,9 @@ class DockerCommands extends Tasks {
    * Place or update the dns resolver file.
    */
   protected function setResolverFile() {
+    $this->setConfig();
+    $root = $this->config->getProjectRoot();
     if ($ip = $this->getDockerMachineIp()) {
-      $this->setRoots();
       if (!file_exists('/etc/resolver/dpulp') ||
         strpos(file_get_contents('/etc/resolver/dpulp'), $ip) === FALSE
       ) {
@@ -240,12 +241,12 @@ class DockerCommands extends Tasks {
           );
         }
         $collection->addTask(
-          $this->taskExec('cp ' . "$this->projectRoot/setup/dns/dpulp-template $this->projectRoot/setup/dns/dpulp")
+          $this->taskExec('cp ' . "$root/setup/dns/dpulp-template $root/setup/dns/dpulp")
         )->rollback(
-          $this->taskExec('rm -f' . "$this->projectRoot/setup/dns/dpulp")
+          $this->taskExec('rm -f' . "$root/setup/dns/dpulp")
         );
         $collection->addTask(
-          $this->taskReplaceInFile("$this->projectRoot/setup/dns/dpulp")
+          $this->taskReplaceInFile("$root/setup/dns/dpulp")
             ->from('{docker-dp}')
             ->to($ip)
         );
@@ -256,7 +257,7 @@ class DockerCommands extends Tasks {
         }
         $collection->addTask(
           $this->taskExecStack()
-            ->exec("sudo mv $this->projectRoot/setup/dns/dpulp /etc/resolver")
+            ->exec("sudo mv $root/setup/dns/dpulp /etc/resolver")
             ->exec('sudo chown root:wheel /etc/resolver/dpulp')
         );
         $collection->run();
@@ -316,7 +317,7 @@ class DockerCommands extends Tasks {
    */
   protected function setDnsProxyMac() {
     $this->setConfig();
-    $dockerConfig = $this->config->getDockerMachineConfig();
+    $dockerConfig = $this->getDockerMachineConfig();
     if ($this->getDockerMachineIp()) {
       $this->io()->title('Setup HTTP Proxy and .dp domain resolution.');
       // Boot the DNS service.
@@ -353,7 +354,7 @@ class DockerCommands extends Tasks {
    */
   protected function setMacDnsmasq() {
     $this->setConfig();
-    $dockerConfig = $this->config->getDockerMachineConfig();
+    $dockerConfig = $this->getDockerMachineConfig();
     if (!isset($dockerConfig)) {
       $this->io()->error('Unable to connect to docker machine.');
       return;
@@ -372,7 +373,7 @@ class DockerCommands extends Tasks {
           if ($dnsmasq['State']['Running']) {
             // And the container is already running.
             $this->io()->note('DNS service is already running.');
-            return;
+            return TRUE;
           }
           // The container is stopped - remove so it is recreated to
           // renew the ip of the docker machine.
@@ -409,7 +410,7 @@ class DockerCommands extends Tasks {
         ->error('You must start the docker service using `ahoy cast-off`');
       return;
     }
-    $dockerConfig = $this->config->getDockerMachineConfig();
+    $dockerConfig = $this->getDockerMachineConfig();
     $root = $this->config->getProjectRoot();
     $collection = $this->collectionBuilder();
     $collection->addTask(
@@ -498,7 +499,7 @@ class DockerCommands extends Tasks {
     $this->setConfig();
     // Get the port string.
     $port = NULL;
-    $dockerConfig = $this->config->getDockerMachineConfig();
+    $dockerConfig = $this->getDockerMachineConfig();
     $result = $this->taskExec("docker-compose $dockerConfig port database 3306")
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->printOutput(FALSE)

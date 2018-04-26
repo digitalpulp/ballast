@@ -1,17 +1,15 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: shawnduncan
- * Date: 4/17/18
- * Time: 1:40 PM
- */
 
 namespace Ballast\Utilities;
 
 use Symfony\Component\Yaml\Yaml;
 use DrupalFinder\DrupalFinder;
 
-
+/**
+ * Configuration utility singleton.
+ *
+ * @package Ballast\Utilities
+ */
 class Config {
 
   /**
@@ -36,16 +34,10 @@ class Config {
   protected $projectRoot;
 
   /**
-   * Docker Machine generated config string.
-   *
-   * @var string
-   */
-  protected $dockerConfig;
-
-  /**
    * Get the path to the Drupal root directory.
    *
    * @return string
+   *   The drupal root path.
    */
   public function getDrupalRoot() {
     if (empty($this->drupalRoot)) {
@@ -58,6 +50,7 @@ class Config {
    * Get the path to the project root directory.
    *
    * @return string
+   *   The project root path.
    */
   public function getProjectRoot() {
     if (empty($this->projectRoot)) {
@@ -70,6 +63,7 @@ class Config {
    * Return a config item if set.
    *
    * @return string
+   *   The value.
    */
   public function get($key) {
     if (empty($this->configuration)) {
@@ -79,27 +73,6 @@ class Config {
       return $this->configuration[$key];
     }
     return NULL;
-  }
-
-  /**
-   * Construct Mac Docker exec command flags.
-   */
-  public function getDockerMachineConfig() {
-    if (!isset($this->dockerConfig)) {
-      $result = $this->taskExec('docker-machine config dp-docker')
-        ->printOutput(FALSE)
-        ->printMetadata(FALSE)
-        ->run();
-      $this->io()->newLine();
-      if ($result instanceof Result && $result->wasSuccessful()) {
-        $this->dockerConfig = str_replace(["\r", "\n"], ' ',
-          $result->getMessage());
-        // Workaround for docker-compose:1.20:
-        $this->dockerConfig = str_replace('-H=', '--host ',
-          $this->dockerConfig);
-      }
-    }
-    return $this->dockerConfig;
   }
 
   /**

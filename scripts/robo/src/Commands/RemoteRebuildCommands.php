@@ -14,6 +14,8 @@ use Ballast\Utilities\Config;
  */
 class RemoteRebuildCommands extends Tasks {
 
+  use DockerMachineTrait;
+
   /**
    * Config Utility (singleton).
    *
@@ -62,7 +64,7 @@ class RemoteRebuildCommands extends Tasks {
     $this->dockerFlags = '';
     switch (php_uname('s')) {
       case 'Darwin':
-        $this->dockerFlags = $this->config->getDockerMachineConfig();
+        $this->dockerFlags = $this->getDockerMachineConfig();
         break;
 
       default:
@@ -85,7 +87,7 @@ class RemoteRebuildCommands extends Tasks {
     $this->io()->text('Dumping remote database');
     $dumpRemote = $this->collectionBuilder();
     $dumpRemote->addTask(
-      $this->taskExec("$root/vendor/bin/drush --alias-path='$root/drush/sites' @$target sql-dump --result-file= > $this->projectRoot/target.sql")
+      $this->taskExec("$root/vendor/bin/drush --alias-path='$root/drush/sites' @$target sql-dump --result-file= > $root/target.sql")
         ->printMetadata(FALSE)
         ->printOutput(TRUE)
     );

@@ -2,8 +2,12 @@
 
 namespace Ballast\Commands;
 
+use Robo\Contract\VerbosityThresholdInterface;
+
 /**
  * Reusable methods for checking front end build status flags.
+ *
+ * Only usable within classes extending \Robo\Tasks.
  *
  * @package Ballast\Commands
  */
@@ -20,14 +24,17 @@ trait FrontEndTrait {
    */
   public function getFrontEndStatus($progress = FALSE) {
     // Initialize variables.
+    $this->setConfig();
     $ready = FALSE;
     $max_rounds = 150;
     $rounds = 0;
+    $drupalRoot = $this->config->getDrupalRoot();
+    $projectRoot = $this->config->getProjectRoot();
     if (isset($this->configuration['site_theme_path'])) {
-      $flag_complete = sprintf('%s/%s/%s/INITIALIZED.txt', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+      $flag_complete = sprintf('%s/%s/%s/INITIALIZED.txt', $projectRoot, $this->config->get('site_theme_path'), $this->config->get('site_theme_name'));
     }
     else {
-      $flag_complete = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
+      $flag_complete = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $drupalRoot, $this->config->get('site_theme_name'));
     }
     // Sleep until the initialize file is detected or 30 rounds (5 min.) have
     // passed.
@@ -55,16 +62,18 @@ trait FrontEndTrait {
    * initial work.
    */
   public function setClearFrontEndFlags() {
-    $this->getConfig();
+    $this->setConfig();
+    $drupalRoot = $this->config->getDrupalRoot();
+    $projectRoot = $this->config->getProjectRoot();
     if (isset($this->configuration['site_theme_path'])) {
-      $flag_file = sprintf('%s/%s/%s/INITIALIZED.txt', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
-      $flag_npm_install = sprintf('%s/%s/%s/BUILDING.txt', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
-      $flag_gulp_build = sprintf('%s/%s/%s/COMPILING.TXT', $this->projectRoot, $this->configuration['site_theme_path'], $this->configuration['site_theme_name']);
+      $flag_file = sprintf('%s/%s/%s/INITIALIZED.txt', $projectRoot, $this->config->get('site_theme_path'), $this->config->get('site_theme_name'));
+      $flag_npm_install = sprintf('%s/%s/%s/BUILDING.txt', $projectRoot, $this->config->get('site_theme_path'), $this->config->get('site_theme_name'));
+      $flag_gulp_build = sprintf('%s/%s/%s/COMPILING.TXT', $projectRoot, $this->config->get('site_theme_path'), $this->config->get('site_theme_name'));
     }
     else {
-      $flag_file = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
-      $flag_npm_install = sprintf('%s/themes/custom/%s/BUILDING.txt', $this->drupalRoot, $this->configuration['site_theme_name']);
-      $flag_gulp_build = sprintf('%s/themes/custom/%s/COMPILING.TXT', $this->drupalRoot, $this->configuration['site_theme_name']);
+      $flag_file = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $drupalRoot, $this->config->get('site_theme_name'));
+      $flag_npm_install = sprintf('%s/themes/custom/%s/BUILDING.txt', $drupalRoot, $this->config->get('site_theme_name'));
+      $flag_gulp_build = sprintf('%s/themes/custom/%s/COMPILING.TXT', $drupalRoot, $this->config->get('site_theme_name'));
     }
     // Remove flags.
     $this->taskFilesystemStack()

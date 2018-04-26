@@ -263,9 +263,9 @@ class DeployCommands extends Tasks {
         }
       }
 
-      $ready = $this->startUp->getFrontEndStatus(TRUE);
+      $ready = $this->getFrontEndStatus(TRUE);
     }
-    $this->startUp->setClearFrontEndFlags();
+    $this->setClearFrontEndFlags();
   }
 
   /**
