@@ -263,6 +263,10 @@ class SetupCommands extends Tasks {
   protected function setPrecommitHooks() {
     $this->setConfig();
     $root = $this->config->getProjectRoot();
+    if (!file_exists("$root/.git")) {
+      $this->io()->note('Git repository not found.  Precommit will be setup on a later composer install after a .git directory is present.');
+      return;
+    }
     $this->io()->section('Configuring pre-commit linting tool.');
     $collection = $this->collectionBuilder();
     $collection->addTask(
