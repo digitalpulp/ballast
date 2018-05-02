@@ -12,5 +12,5 @@
 - name: deploy
   tag: develop
   service: deploy
-  command: vendor/bin/robo --load-from ./scripts/robo deploy
+  command: php scripts/robo/BallastRunner.php deploy
 
