@@ -25,7 +25,7 @@ services:
     environment:
       XDEBUG_HOST: {host_ip}
   web:
-    image: digitalpulp/nginx:stable-alpine-1.0.0
+    image: digitalpulp/nginx:stable-alpine-1.0.1
     # image: digitalpulp/apache
     depends_on:
       - database
