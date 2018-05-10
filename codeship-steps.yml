@@ -1,3 +1,7 @@
+- name: pull_dependencies
+  tag: develop
+  service: deploy
+  command: composer install --no-dev --no-interaction --optimize-autoloader
 - name: code_quality
   service: code-quality
   command: pre-commit.sh
@@ -5,10 +9,6 @@
   tag: develop
   service: front-end
   command: entrypoint.sh
-- name: pull_dependencies
-  tag: develop
-  service: deploy
-  command: composer install --no-dev --no-interaction --optimize-autoloader
 - name: deploy
   tag: develop
   service: deploy
