@@ -29,13 +29,19 @@ trait FrontEndTrait {
     $max_rounds = 150;
     $rounds = 0;
     $drupalRoot = $this->config->getDrupalRoot();
+    $this->say(sprintf('Detected drupal root: %s', $drupalRoot));
     $projectRoot = $this->config->getProjectRoot();
-    if (isset($this->configuration['site_theme_path'])) {
-      $flag_complete = sprintf('%s/%s/%s/INITIALIZED.txt', $projectRoot, $this->config->get('site_theme_path'), $this->config->get('site_theme_name'));
+    $this->say(sprintf('Detected project root: %s', $projectRoot));
+    $siteThemePath = $this->config->get('site_theme_path');
+    if (!empty($siteThemePath)) {
+      $this->say(sprintf('Detected site_theme_path: %s', $siteThemePath));
+      $flag_complete = sprintf('%s/%s/%s/INITIALIZED.txt', $projectRoot, $siteThemePath, $this->config->get('site_theme_name'));
     }
     else {
+      $this->say(sprintf('No site_theme_path detected'));
       $flag_complete = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $drupalRoot, $this->config->get('site_theme_name'));
     }
+    $this->say(sprintf('Flag complete set to: %s', $flag_complete));
     // Sleep until the initialize file is detected or 30 rounds (5 min.) have
     // passed.
     if ($progress) {
@@ -65,10 +71,11 @@ trait FrontEndTrait {
     $this->setConfig();
     $drupalRoot = $this->config->getDrupalRoot();
     $projectRoot = $this->config->getProjectRoot();
-    if (isset($this->configuration['site_theme_path'])) {
-      $flag_file = sprintf('%s/%s/%s/INITIALIZED.txt', $projectRoot, $this->config->get('site_theme_path'), $this->config->get('site_theme_name'));
-      $flag_npm_install = sprintf('%s/%s/%s/BUILDING.txt', $projectRoot, $this->config->get('site_theme_path'), $this->config->get('site_theme_name'));
-      $flag_gulp_build = sprintf('%s/%s/%s/COMPILING.TXT', $projectRoot, $this->config->get('site_theme_path'), $this->config->get('site_theme_name'));
+    $siteThemePath = $this->config->get('site_theme_path');
+    if (!empty($siteThemePath)) {
+      $flag_file = sprintf('%s/%s/%s/INITIALIZED.txt', $projectRoot, $siteThemePath, $this->config->get('site_theme_name'));
+      $flag_npm_install = sprintf('%s/%s/%s/BUILDING.txt', $projectRoot, $siteThemePath, $this->config->get('site_theme_name'));
+      $flag_gulp_build = sprintf('%s/%s/%s/COMPILING.TXT', $projectRoot, $siteThemePath, $this->config->get('site_theme_name'));
     }
     else {
       $flag_file = sprintf('%s/themes/custom/%s/INITIALIZED.txt', $drupalRoot, $this->config->get('site_theme_name'));
