@@ -211,7 +211,8 @@ files are updated in a new release of Drupal core.
 
 Follow the steps below to update your core files.
 
-1. Run `composer update drupal/core --with-dependencies` to update
+1. Change the value of `webflo/drupal-core-strict` to the latest core version.
+2. Run `composer update drupal/core webflo/drupal-core-require-dev webflo/drupal-core-strict --with-all-dependencies` to update
    Drupal Core and its dependencies.
 2. Run `git diff` to determine if any of the scaffolding files have
    changed. Review the files for any changes and restore any
