@@ -28,6 +28,8 @@ may follow.
 managed with this approach.
     * If you have any existing files exported via
 NFS they must not be in the chosen folder.
+    * You must also not choose a folder that is a child of an existing
+    NFS export.
     * The easiest way forward is
 to create a new folder such as `~/DockerSites`.
 
