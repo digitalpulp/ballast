@@ -110,7 +110,7 @@ class RemoteRebuildCommands extends Tasks {
     $this->io()->text('Dumping remote database');
     $dumpRemote = $this->collectionBuilder();
     $dumpRemote->addTask(
-      $this->taskExec("$root/vendor/bin/drush --alias-path='$root/drush/sites' @$target sql-dump --result-file= > $root/target.sql")
+      $this->taskExec("$root/vendor/bin/drush --alias-path='$root/drush/sites' @$target sql-dump --result-file= | sed 's/Connection to .* closed./--/' > $root/target.sql")
         ->printMetadata(FALSE)
         ->printOutput(TRUE)
     );
