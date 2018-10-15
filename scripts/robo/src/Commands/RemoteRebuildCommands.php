@@ -114,12 +114,6 @@ class RemoteRebuildCommands extends Tasks {
         ->printMetadata(FALSE)
         ->printOutput(TRUE)
     );
-    $dumpRemote->addTask(
-      $this->taskReplaceInFile("$root/target.sql")
-        ->regex('~Connection to(.*)closed.~')
-        ->to('--')
-        ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-    );
     $result = $dumpRemote->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
     return $result instanceof Result && $result->wasSuccessful();
