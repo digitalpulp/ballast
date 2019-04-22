@@ -1,10 +1,13 @@
-- name: pull_dependencies
-  tag: develop
+- name: pull_dependencies_with_dev
   service: deploy
-  command: composer install --no-dev --no-interaction --optimize-autoloader
+  command: composer install --no-interaction
 - name: code_quality
   service: code-quality
   command: pre-commit.sh
+- name: remove_dev_dependencies
+  tag: develop
+  service: deploy
+  command: composer install --no-dev --no-interaction --optimize-autoloader
 - name: build_front
   tag: develop
   service: front-end
@@ -13,4 +16,3 @@
   tag: develop
   service: deploy
   command: php scripts/robo/BallastRunner.php deploy
-
