@@ -26,7 +26,7 @@ services:
     environment:
       XDEBUG_HOST: {host_ip}
   web:
-    image: digitalpulp/nginx:stable-alpine-1.0.1
+    image: digitalpulp/nginx:stable-alpine-1.0.2
     # image: digitalpulp/apache
     depends_on:
       - database
@@ -42,7 +42,7 @@ services:
       - internal
       - proxy
   front-end:
-    image: digitalpulp/front-end:1.0.13
+    image: digitalpulp/front-end:1.3.1
     environment:
       THEME_NAME: {site_theme_name}
     depends_on:
@@ -53,7 +53,7 @@ services:
       - internal
     working_dir: /var/www/docroot/themes/custom/{site_theme_name}
   cli:
-    image: digitalpulp/cli:7.1-alpine-cli-1.0.12
+    image: digitalpulp/cli:7.1-alpine-cli-1.0.13
     depends_on:
       - database
       - php

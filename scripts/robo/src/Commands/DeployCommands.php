@@ -45,8 +45,13 @@ class DeployCommands extends Tasks {
     'remote-branch' => NULL,
     'remote' => NULL,
     'build_id' => NULL,
+    'date-tag' => FALSE,
   ]) {
-    if (!empty($options['tag'])) {
+    if (!empty($options['tag']) || $options['date-tag']) {
+      // If the date-tag option is set then create a date based tag.
+      if ($options['date-tag']) {
+        $options['tag'] = date('Y-m-d=H-i');
+      }
       $result = $this->deployTag($options);
     }
     else {
@@ -224,8 +229,12 @@ class DeployCommands extends Tasks {
       $this->taskExec('echo -e ${SSH_PRIVATE_KEY} >> "${HOME}/.ssh/id_rsa"')
     );
     $collection->addTask(
+      $this->taskExec('ssh-keyscan -t rsa bitbucket.org >> /root/.ssh/known_hosts')
+    );
+    $collection->addTask(
       $this->taskFilesystemStack()
         ->chmod('/root/.ssh/id_rsa', 0600)
+        ->chmod('/root/.ssh/known_hosts', 0700)
         ->chmod('/root/.ssh', 0600)
     );
     if (!empty($passphrase)) {
@@ -235,6 +244,9 @@ class DeployCommands extends Tasks {
         $this->taskExec('/root/ssh-add.sh')
       );
     }
+    $collection->addTask(
+      $this->taskExec('git fetch --unshallow')
+    );
     $result = $collection->run();
     if ($result instanceof Result && !$result->wasSuccessful()) {
       throw new \Exception('Unable to set git host key.');
@@ -289,7 +301,10 @@ class DeployCommands extends Tasks {
     $this->say('Finding .git subdirectories...');
     $git = new Finder();
     $git
-      ->in([$this->config->getProjectRoot() . '/vendor', $this->config->getProjectRoot() . '/docroot'])
+      ->in([
+        $this->config->getProjectRoot() . '/vendor',
+        $this->config->getProjectRoot() . '/docroot',
+      ])
       ->directories()
       ->ignoreDotFiles(FALSE)
       ->ignoreVCS(FALSE)
@@ -434,6 +449,9 @@ class DeployCommands extends Tasks {
       ->stopOnFail()
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->push($options['remote_name'], $options['deploy-branch'] . ':' . $options['remote-branch']);
+    if (!empty($options['tag'])) {
+      $gitJobs->push($options['remote_name'], $options['tag']);
+    }
     return $gitJobs->run();
   }
 
