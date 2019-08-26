@@ -110,15 +110,22 @@ class RemoteRebuildCommands extends Tasks {
     $this->io()->text('Dumping remote database');
     $dumpRemote = $this->collectionBuilder();
     $dumpRemote->addTask(
-      $this->taskExec("$root/vendor/bin/drush --alias-path='$root/drush/sites' @$target sql-dump --result-file= > $root/target.sql")
+      $this->taskExec("$root/vendor/bin/drush --alias-path='$root/drush/sites' @$target sql-dump --gzip --result-file=/tmp/target.sql")
         ->printMetadata(FALSE)
         ->printOutput(TRUE)
     );
     $dumpRemote->addTask(
-      $this->taskReplaceInFile("$root/target.sql")
-        ->regex('~Connection to(.*)closed.~')
-        ->to('--')
-        ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      $this->taskExec("$root/vendor/bin/drush --alias-path='$root/drush/sites' rsync -y @$target:/tmp/target.sql.gz $root/tmp/")
+        ->printMetadata(FALSE)
+        ->printOutput(TRUE)
+    );
+    $dumpRemote->addTask(
+      $this->taskExec("gunzip $root/tmp/target.sql.gz -c > $root/target.sql")
+        ->printMetadata(FALSE)
+        ->printOutput(TRUE)
+    );
+    $dumpRemote->addTask(
+      $this->taskDeleteDir("$root/tmp/")
     );
     $result = $dumpRemote->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();

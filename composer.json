@@ -28,16 +28,17 @@
         "cweagans/composer-patches": "^1.6.5",
         "consolidation/robo": "^1.0",
         "drupal-composer/drupal-scaffold": "^2.5",
-        "drupal/console": "^1.0.2",
-        "drupal/core": "8.6.5",
-        "drush/drush": "^9.1",
+        "drupal/console": "^1.9.2",
+        "drupal/core": "8.7.6",
+        "drush/drush": "^9.7",
         "oomphinc/composer-installers-extender": "^1.1",
-        "webflo/drupal-core-strict": "8.6.5",
+        "webflo/drupal-core-strict": "8.7.6",
         "webflo/drupal-finder": "^1.0.0",
-        "webmozart/path-util": "^2.3"
+        "webmozart/path-util": "^2.3",
+        "zaporylie/composer-drupal-optimizations": "^1.1"
     },
     "require-dev": {
-      "webflo/drupal-core-require-dev": "8.6.5"
+      "webflo/drupal-core-require-dev": "8.7.6"
     },
     "conflict": {
         "drupal/drupal": "*"
@@ -66,13 +67,11 @@
         ],
         "post-install-cmd": [
             "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
-            "composer robo setup:drupal",
-            "composer robo setup:prerequisites"
+            "composer robo setup:instructions"
         ],
         "post-update-cmd": [
             "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
-            "composer robo setup:drupal",
-            "composer robo setup:prerequisites"
+            "composer robo setup:instructions"
         ]
     },
     "extra": {
