@@ -53,7 +53,7 @@ services:
       - internal
     working_dir: /var/www/docroot/themes/custom/{site_theme_name}
   cli:
-    image: digitalpulp/cli:7.1-alpine-cli-1.0.13
+    image: digitalpulp/cli:7.2-alpine-cli-1.0.1
     depends_on:
       - database
       - php

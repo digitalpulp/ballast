@@ -244,9 +244,14 @@ class DeployCommands extends Tasks {
         $this->taskExec('/root/ssh-add.sh')
       );
     }
-    $collection->addTask(
-      $this->taskExec('git fetch --unshallow')
-    );
+    $shallowCheck = $this->taskExec('git rev-parse --is-shallow-repository --no-revs HEAD')
+      ->interactive(FALSE)
+      ->run();
+    if (trim($shallowCheck->getMessage()) == 'true') {
+      $collection->addTask(
+        $this->taskExec('git fetch --unshallow')
+      );
+    }
     $result = $collection->run();
     if ($result instanceof Result && !$result->wasSuccessful()) {
       throw new \Exception('Unable to set git host key.');
