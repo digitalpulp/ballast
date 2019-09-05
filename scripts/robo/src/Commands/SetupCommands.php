@@ -48,13 +48,6 @@ class SetupCommands extends Tasks {
    * Dispatches prerequisite setup tasks by OS.
    */
   public function setupPrerequisites() {
-    $isDev = getenv('COMPOSER_DEV_MODE');
-    $isCI = getenv('CI_NAME');
-    if (!$isDev || $isCI) {
-      // This is a production build or a CI build,
-      // do not build the local dev environment.
-      return;
-    }
     $this->setConfig();
     switch (php_uname('s')) {
       case 'Darwin':
@@ -84,13 +77,6 @@ class SetupCommands extends Tasks {
    * Copy values from the config.yml and move drupal settings files into place.
    */
   public function setupDrupal() {
-    $isDev = getenv('COMPOSER_DEV_MODE');
-    $isCI = getenv('CI_NAME');
-    if (!$isDev || $isCI) {
-      // This is a production build or a CI build,
-      // do not build the local dev environment.
-      return;
-    }
     $this->setConfig();
     // Set some simple variables for string expansion.
     $drupal = $this->config->getDrupalRoot();
