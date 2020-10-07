@@ -213,7 +213,7 @@ class DockerCommands extends Tasks {
           ->printOutput(FALSE)
       );
       $collection->addTask(
-        $this->taskExec("docker-machine-nfs dp-docker --shared-folder=$folder")
+        $this->taskExec("docker-machine-nfs dp-docker --mount-opts=\"rw,udp,noacl,async,nolock,vers=3,noatime,actimeo=2\" --shared-folder=$folder")
           ->printOutput(FALSE)
       );
       $result = $collection->run();
