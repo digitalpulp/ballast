@@ -42,9 +42,11 @@ class RemoteRebuildCommands extends Tasks {
    * @aliases rebuild
    *
    * @option no-update Skip database updates and configuration import
+   * @option no-compile Skip theme compilation
    */
   public function rebuildSite($environment = 'dev', array $options = [
     'no-update' => FALSE,
+    'no-compile' => FALSE,
   ]) {
     $this->setInitialConditions();
     $target = $this->config->get('site_alias_name') . '.' . $environment;
@@ -55,7 +57,9 @@ class RemoteRebuildCommands extends Tasks {
       if (!$options['no-update']) {
         $this->getUpdate();
       }
-      $this->getRebuiltTheme();
+      if (!$options['no-compile']) {
+        $this->getRebuiltTheme();
+      }
       $this->io()->success("Local site rebuilt from $environment");
     }
     else {
