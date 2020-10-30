@@ -99,7 +99,7 @@ $config['stage_file_proxy.settings']['use_imagecache_root'] = TRUE;
 $config['stage_file_proxy.settings']['verify'] = TRUE;
 
 $dir = '/var/www';
-$config_directories[CONFIG_SYNC_DIRECTORY] = $dir . '/config';
+$settings['config_sync_directory'] = $dir . '/config';
 
 /* Load development services */
 $settings['container_yamls'][] = $dir . '/docroot/sites/default/services.dev.yml';

@@ -5,6 +5,8 @@
  * This file holds common settings for all environments on Acquia and is only included on Acquia servers.
  */
 
+// @codingStandardsIgnoreFile
+
 use Symfony\Component\HttpFoundation\Request;
 use Drupal\Core\DrupalKernel;
 
@@ -28,7 +30,7 @@ $settings['trusted_host_patterns'][] = '^.+\.prod.acquia-sites.com$';
 
 // Get the path to the parent of docroot.
 $dir = dirname(DRUPAL_ROOT);
-$config_directories[CONFIG_SYNC_DIRECTORY] = $dir . '/config';
+$settings['config_sync_directory'] = $dir . '/config';
 if (isset($config_directories['vcs'])) {
   // Acquia creates an extra config storage directory within the file system.
   // We do not use this directory for reasons of security.

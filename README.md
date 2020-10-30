@@ -67,6 +67,28 @@ is shown as the last line in the snippet below:
     }
 }
 ```
+
+In addition, an additional propery may be added to the `drupal-scaffold` key in the `extra` property:
+```json
+{
+"file-mapping": {
+        "[web-root]/.htaccess": false,
+        "[web-root]/.eslintrc.json": false,
+        "[web-root]/.ht.router.php": false,
+        "[web-root]/INSTALL.txt": false,
+        "[web-root]/README.txt": false,
+        "[web-root]/autoload.php": false,
+        "[web-root]/example.gitignore": false,
+        "[web-root]/index.php": false,
+        "[web-root]/robots.txt": false,
+        "[web-root]/update.php": false,
+        "[web-root]/web.config": false,
+        "[web-root]/sites/default/settings.php": false
+      }
+}
+```
+These will block that file from being changed when core is updated or added to the project.
+
 ### Initial Composer Install
 
 You may wish to require an initial line up of contributed modules. (See

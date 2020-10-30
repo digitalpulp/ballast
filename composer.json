@@ -6,11 +6,18 @@
     "authors": [
         {
             "name": "Shawn Duncan",
-            "role": "Project Lead"
+            "role": "Project Lead",
+            "homepage": "https://www.drupal.org/u/fathershawn"
         },
         {
           "name": "Nick Main",
-          "role": "Developer"
+          "role": "Developer",
+          "homepage": "https://www.drupal.org/u/nickmaine"
+        },
+        {
+          "name": "Sam Thompson",
+          "role": "Developer",
+          "homepage": "https://www.drupal.org/u/samtny"
         }
     ],
     "repositories": [
@@ -26,18 +33,18 @@
     "require": {
         "composer/installers": "^1.2",
         "cweagans/composer-patches": "^1.6.5",
-        "consolidation/robo": "^1.0",
-        "drupal-composer/drupal-scaffold": "^2.5",
-        "drupal/console": "^1.9.2",
-        "drupal/core-recommended": "^8.8.1",
-        "drush/drush": "^9.7",
+        "consolidation/robo": "^2.0",
+        "drupal/core-composer-scaffold": "^9.0",
+        "drupal/core-recommended": "^9.0",
+        "drush/drush": "^10.3",
         "oomphinc/composer-installers-extender": "^1.1",
-        "webflo/drupal-finder": "^1.0.0",
+        "webflo/drupal-finder": "^1.2.0",
         "webmozart/path-util": "^2.3",
         "zaporylie/composer-drupal-optimizations": "^1.1"
     },
     "require-dev": {
-      "drupal/core-dev": "^8.8.1"
+      "drupal/core-dev": "^9.0",
+      "mglaman/phpstan-drupal-deprecations": "^0.11.1"
     },
     "conflict": {
         "drupal/drupal": "*"
@@ -56,22 +63,21 @@
         ]
     },
     "scripts": {
-        "drupal-scaffold": "DrupalComposer\\DrupalScaffold\\Plugin::scaffold",
-        "robo": "@php scripts/robo/BallastRunner.php --ansi",
-        "pre-install-cmd": [
-            "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
-        ],
-        "pre-update-cmd": [
-            "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
-        ],
-        "post-install-cmd": [
-            "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
-            "composer robo setup:instructions"
-        ],
-        "post-update-cmd": [
-            "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
-            "composer robo setup:instructions"
-        ]
+      "robo": "@php scripts/robo/BallastRunner.php --ansi",
+      "pre-install-cmd": [
+        "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
+      ],
+      "pre-update-cmd": [
+        "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
+      ],
+      "post-install-cmd": [
+        "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
+        "composer robo setup:instructions"
+      ],
+      "post-update-cmd": [
+        "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
+        "composer robo setup:instructions"
+      ]
     },
     "extra": {
         "installer-types": ["bower-asset"],
@@ -82,6 +88,11 @@
             "docroot/profiles/contrib/{$name}": ["type:drupal-profile"],
             "docroot/themes/contrib/{$name}": ["type:drupal-theme"],
             "drush/Commands/{$name}": ["type:drupal-drush"]
+        },
+      "drupal-scaffold": {
+        "locations": {
+          "web-root": "./docroot"
         }
+      }
     }
-}
+   }
