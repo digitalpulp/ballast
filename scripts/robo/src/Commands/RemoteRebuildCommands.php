@@ -36,18 +36,30 @@ class RemoteRebuildCommands extends Tasks {
    *
    * @param string $environment
    *   The environment suffix for the drush alias.
+   * @param array $options
+   *   An array of command line options.
    *
    * @aliases rebuild
+   *
+   * @option no-update Skip database updates and configuration import
+   * @option no-compile Skip theme compilation
    */
-  public function rebuildSite($environment = 'dev') {
+  public function rebuildSite($environment = 'dev', array $options = [
+    'no-update' => FALSE,
+    'no-compile' => FALSE,
+  ]) {
     $this->setInitialConditions();
     $target = $this->config->get('site_alias_name') . '.' . $environment;
     if ($this->getRemoteDump($target)) {
       $this->io()->text('Remote database dumped.');
       // The following methods throw a \RuntimeException on failure.
       $this->getImport();
-      $this->getUpdate();
-      $this->getRebuiltTheme();
+      if (!$options['no-update']) {
+        $this->getUpdate();
+      }
+      if (!$options['no-compile']) {
+        $this->getRebuiltTheme();
+      }
       $this->io()->success("Local site rebuilt from $environment");
     }
     else {
