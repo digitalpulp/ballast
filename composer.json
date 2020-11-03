@@ -31,16 +31,16 @@
         }
     ],
     "require": {
-        "composer/installers": "^1.2",
-        "cweagans/composer-patches": "^1.6.5",
+        "composer/installers": "^1.9",
+        "cweagans/composer-patches": "^1.7",
         "consolidation/robo": "^2.0",
         "drupal/core-composer-scaffold": "^9.0",
         "drupal/core-recommended": "^9.0",
         "drush/drush": "^10.3",
-        "oomphinc/composer-installers-extender": "^1.1",
+        "oomphinc/composer-installers-extender": "^2.0",
         "webflo/drupal-finder": "^1.2.0",
         "webmozart/path-util": "^2.3",
-        "zaporylie/composer-drupal-optimizations": "^1.1",
+        "zaporylie/composer-drupal-optimizations": "^1.2",
         "ext-json": "*",
         "ext-sockets": "*"
     },
