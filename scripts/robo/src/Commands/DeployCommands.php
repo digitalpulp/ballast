@@ -6,11 +6,14 @@ use Robo\Tasks;
 use Robo\Result;
 use Robo\Contract\VerbosityThresholdInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Ballast\Utilities\Config;
 use Symfony\Component\Finder\Finder;
 
 /**
  * Robo commands that manage deployment.
+ *
+ * phpcs:disable Drupal.Commenting.FunctionComment.ParamMissingDefinition
  *
  * @package Ballast\Commands
  */
@@ -33,12 +36,12 @@ class DeployCommands extends Tasks {
    * @param array $options
    *   Options from the command line.
    *
-   * @aliases deploy
-   *
    * @throws \Exception
    *   Throws an exception if the deployment fails.
+   *
+   * @aliases deploy
    */
-  public function deployBuild(array $options = [
+  public function deployBuild(SymfonyStyle $io, array $options = [
     'branch' => NULL,
     'tag' => NULL,
     'commit-msg' => NULL,
@@ -58,8 +61,7 @@ class DeployCommands extends Tasks {
       $result = $this->deployBranch($options);
     }
     if ($result instanceof Result && $result->wasSuccessful()) {
-      $this->io()
-        ->success('Deployment succeeded.');
+      $io->success('Deployment succeeded.');
     }
     else {
       throw new \Exception('Deployment failed.');
@@ -355,7 +357,7 @@ class DeployCommands extends Tasks {
     );
     $result = $collection->run();
     if ($result instanceof Result && !$result->wasSuccessful()) {
-      throw new \Exception('Unable to sanizize the build.');
+      throw new \Exception('Unable to sanitize the build.');
     }
   }
 

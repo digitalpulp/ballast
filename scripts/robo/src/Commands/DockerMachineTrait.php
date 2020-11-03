@@ -3,11 +3,14 @@
 namespace Ballast\Commands;
 
 use Robo\Result;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Reusable methods for interacting with Docker Machine flags.
  *
  * Only usable within classes extending \Robo\Tasks.
+ *
+ * phpcs:disable Drupal.Commenting.FunctionComment.ParamMissingDefinition
  *
  * @package Ballast\Commands
  */
@@ -22,14 +25,20 @@ trait DockerMachineTrait {
 
   /**
    * Construct Mac Docker exec command flags.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @return string
+   *   The correct docker-machine config string.
    */
-  public function getDockerMachineConfig() {
+  public function getDockerMachineConfig(SymfonyStyle $io) {
     if (!isset($this->dockerConfig)) {
       $result = $this->taskExec('docker-machine config dp-docker')
         ->printOutput(FALSE)
         ->printMetadata(FALSE)
         ->run();
-      $this->io()->newLine();
+      $io->newLine();
       if ($result instanceof Result && $result->wasSuccessful()) {
         $this->dockerConfig = str_replace(["\r", "\n"], ' ',
           $result->getMessage());

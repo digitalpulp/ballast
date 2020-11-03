@@ -40,7 +40,9 @@
         "oomphinc/composer-installers-extender": "^1.1",
         "webflo/drupal-finder": "^1.2.0",
         "webmozart/path-util": "^2.3",
-        "zaporylie/composer-drupal-optimizations": "^1.1"
+        "zaporylie/composer-drupal-optimizations": "^1.1",
+        "ext-json": "*",
+        "ext-sockets": "*"
     },
     "require-dev": {
       "drupal/core-dev": "^9.0",

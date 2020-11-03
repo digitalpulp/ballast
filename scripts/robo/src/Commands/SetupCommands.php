@@ -6,10 +6,12 @@ use Robo\Tasks;
 use Robo\Result;
 use Robo\Contract\VerbosityThresholdInterface;
 use Ballast\Utilities\Config;
-use UnexpectedValueException;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Robo commands that manage setup.
+ *
+ * phpcs:disable Drupal.Commenting.FunctionComment.ParamMissingDefinition
  *
  * @package Ballast\Commands
  */
@@ -25,19 +27,17 @@ class SetupCommands extends Tasks {
   /**
    * Output next steps for Ballast.
    */
-  public function setupInstructions() {
-    $this->io()->title('Getting Started');
-    $this->io()->text('If you wish to use Ballast as your local dev setup, run the following commands:');
-    $this->io()->listing([
+  public function setupInstructions(SymfonyStyle $io) {
+    $io->title('Getting Started');
+    $io->text('If you wish to use Ballast as your local dev setup, run the following commands:');
+    $io->listing([
       'composer robo setup:drupal',
       'composer robo setup:prerequisites',
     ]);
-    $this->io()->newLine();
-    $this->io()
-      ->text('If you have previously installed Ballast on this machine you are now ready to cast-off and launch.');
-    $this->io()
-      ->text('To launch this Drupal site, use the following commands:');
-    $this->io()->listing([
+    $io->newLine();
+    $io->text('If you have previously installed Ballast on this machine you are now ready to cast-off and launch.');
+    $io->text('To launch this Drupal site, use the following commands:');
+    $io->listing([
       'ahoy cast-off',
       'or: ahoy launch  (if you have already called `ahoy cast-off` in another project.)',
       'ahoy rebuild',
@@ -47,20 +47,17 @@ class SetupCommands extends Tasks {
   /**
    * Dispatches prerequisite setup tasks by OS.
    */
-  public function setupPrerequisites() {
+  public function setupPrerequisites(SymfonyStyle $io) {
     $this->setConfig();
     switch (php_uname('s')) {
       case 'Darwin':
         $this->setMacRequirements();
         $this->setPrecommitHooks();
-        $this->io()->title("Next Steps");
-        $this->io()
-          ->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
-        $this->io()
-          ->note('All the docker projects need to be in the same parent folder.  Because of the nature of NFS, this folder cannot contain any older vagrant based projects. If needed, create a directory and move this project before continuing.');
-        $this->io()
-          ->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
-        $this->io()->listing([
+        $io->title("Next Steps");
+        $io->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
+        $io->note('All the docker projects need to be in the same parent folder.  Because of the nature of NFS, this folder cannot contain any older vagrant based projects. If needed, create a directory and move this project before continuing.');
+        $io->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
+        $io->listing([
           'ahoy harbor',
           'ahoy cast-off',
           'ahoy rebuild',
@@ -68,15 +65,14 @@ class SetupCommands extends Tasks {
         break;
 
       default:
-        $this->io()
-          ->error("Unable to determine your operating system.  Manual installation will be required.");
+        $io->error("Unable to determine your operating system.  Manual installation will be required.");
     }
   }
 
   /**
    * Copy values from the config.yml and move drupal settings files into place.
    */
-  public function setupDrupal() {
+  public function setupDrupal(SymfonyStyle $io) {
     $this->setConfig();
     // Set some simple variables for string expansion.
     $drupal = $this->config->getDrupalRoot();
@@ -146,7 +142,7 @@ class SetupCommands extends Tasks {
     }
     $result = $collection->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
-      $this->io()->success('Drupal settings are configured.');
+      $io->success('Drupal settings are configured.');
     }
   }
 
@@ -156,7 +152,7 @@ class SetupCommands extends Tasks {
    * @param string $key
    *   The key.
    */
-  public function keyPrep($key) {
+  public function keyPrep(SymfonyStyle $io, $key) {
     $this->setConfig();
     $root = $this->config->getProjectRoot();
     $key_contents = file_get_contents("$root/$key");
@@ -168,11 +164,10 @@ class SetupCommands extends Tasks {
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
-      $this->io()
-        ->success("The key has been processed and appended to the env file.");
+      $io->success("The key has been processed and appended to the env file.");
     }
     else {
-      $this->io()->error('Error message: ' . $result->getMessage());
+      $io->error('Error message: ' . $result->getMessage());
     }
   }
 
@@ -191,32 +186,34 @@ class SetupCommands extends Tasks {
 
   /**
    * MacOS Initial setup.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
    */
-  protected function setMacRequirements() {
+  protected function setMacRequirements(SymfonyStyle $io) {
     $this->setConfig();
-    $this->io()->title('Mac Setup for Ballast');
+    $io->title('Mac Setup for Ballast');
     $result = $this->taskFilesystemStack()
       ->copy($this->config->getProjectRoot() . '/setup/ahoy/mac.ahoy.yml', $this->config->getProjectRoot() . '/.ahoy.yml')
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
-      $this->io()->text('Ahoy commands prepared.');
+      $io->text('Ahoy commands prepared.');
     }
     else {
-      $this->io()->error('Unable to move ahoy.yml file into place.');
-      $this->io()->text('Error is:');
-      $this->io()->text($result->getMessage());
+      $io->error('Unable to move ahoy.yml file into place.');
+      $io->text('Error is:');
+      $io->text($result->getMessage());
     }
     $this->taskExec('brew update')
       ->printOutput(FALSE)
       ->printMetadata(FALSE);
     $prereqs = $this->getPrerequisites('mac');
-    $this->io()->section('Check for Prerequisites');
+    $io->section('Check for Prerequisites');
     $ready = TRUE;
     foreach ($prereqs as $short_name => $full_name) {
       if (!$this->getIsInstalled($short_name)) {
-        $this->io()
-          ->error($full_name . " is not available.  Check the project README for preconditions and instructions.");
+        $io->error($full_name . " is not available.  Check the project README for preconditions and instructions.");
         $ready = FALSE;
       }
     }
@@ -226,8 +223,8 @@ class SetupCommands extends Tasks {
     }
     $required = $this->getRequirements('mac');
     if (count($required) > 0) {
-      $this->io()->text('The following packages need to be installed:');
-      $this->io()->listing(array_column($required, 'name'));
+      $io->text('The following packages need to be installed:');
+      $io->listing(array_column($required, 'name'));
       $collection = $this->collectionBuilder();
       foreach ($required as $package => $settings) {
         $collection->progressMessage('Installing ' . $settings['name']);
@@ -254,22 +251,24 @@ class SetupCommands extends Tasks {
       $this->io->success("Your Mac was already prepared for Ballast.");
     }
     else {
-      $this->io()
-        ->error("Something went wrong.  Changes have been rolled back.");
+      $io->error("Something went wrong.  Changes have been rolled back.");
     }
   }
 
   /**
    * Install pre-commit hooks.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
    */
-  protected function setPrecommitHooks() {
+  protected function setPrecommitHooks(SymfonyStyle $io) {
     $this->setConfig();
     $root = $this->config->getProjectRoot();
     if (!file_exists("$root/.git")) {
-      $this->io()->note('Git repository not found.  Precommit will be setup on a later composer install after a .git directory is present.');
+      $io->note('Git repository not found.  Precommit will be setup on a later composer install after a .git directory is present.');
       return;
     }
-    $this->io()->section('Configuring pre-commit linting tool.');
+    $io->section('Configuring pre-commit linting tool.');
     $collection = $this->collectionBuilder();
     $collection->addTask(
       $this->taskExec('pre-commit install')->dir($this->config->getProjectRoot())
@@ -304,46 +303,50 @@ class SetupCommands extends Tasks {
       $this->io->success("Hooks for commit-msg and pre-commit linting have been installed.");
     }
     else {
-      $this->io()
-        ->error("Something went wrong.  Changes have been rolled back.");
+      $io->error("Something went wrong.  Changes have been rolled back.");
     }
   }
 
   /**
    * Checks for installed packages use `which`.
    *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
    * @param string $package
    *   The package to check.
    *
    * @return bool
    *   True if found.
    */
-  protected function getIsInstalled($package) {
-    $this->io()->comment("Checking installation of " . $package . "...");
+  protected function getIsInstalled(SymfonyStyle $io, $package) {
+    $io->comment("Checking installation of " . $package . "...");
     $result = $this->taskExec('which -s ' . $package)
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
       ->run();
-    $this->io()->newLine();
+    $io->newLine();
     if ($result instanceof Result) {
       return $result->wasSuccessful();
     }
-    throw new UnexpectedValueException("taskExec() failed to return a valid Result object in getIsInstalled()");
+    throw new \UnexpectedValueException("taskExec() failed to return a valid Result object in getIsInstalled()");
   }
 
   /**
    * Gets the packages installed using Homebrew.
    *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
    * @return array
    *   Associative array keyed by package short name.
    */
-  protected function getBrewedComponents() {
-    $this->io()->comment('Getting the packages installed with Homebrew');
+  protected function getBrewedComponents(SymfonyStyle $io) {
+    $io->comment('Getting the packages installed with Homebrew');
     $result = $this->taskExec('brew info --json=v1 --installed')
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
       ->run();
-    $this->io()->newLine();
+    $io->newLine();
     if ($result instanceof Result) {
       $rawJson = json_decode($result->getMessage(), 'assoc');
       $parsed = [];
@@ -377,13 +380,15 @@ class SetupCommands extends Tasks {
   /**
    * Get the required packages by machine name.
    *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
    * @param string $machine
    *   The machine key.
    *
    * @return array
    *   Associative array of requirements keyed by short name.
    */
-  protected function getRequirements($machine) {
+  protected function getRequirements(SymfonyStyle $io, $machine) {
     // State the requirements in an array.
     // Unset requirements already met to create a installation manifest.
     switch ($machine) {
@@ -421,7 +426,7 @@ class SetupCommands extends Tasks {
           ],
         ];
         $brewed = $this->getBrewedComponents();
-        $this->io()->section('Checking for Installed Requirements');
+        $io->section('Checking for Installed Requirements');
         foreach ($required as $package => $full_name) {
           if (isset($brewed[$package]) || ($this->getIsInstalled($package))) {
             // Installed.  Unset.
