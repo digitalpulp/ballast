@@ -40,7 +40,7 @@ class SetupCommands extends Tasks {
     $io->listing([
       'ahoy cast-off',
       'or: ahoy launch  (if you have already called `ahoy cast-off` in another project.)',
-      'ahoy rebuild',
+      'ahoy rebuild (if you have Drush aliases ready in `drush/sites`)',
     ]);
   }
 
