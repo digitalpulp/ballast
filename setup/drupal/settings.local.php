@@ -85,7 +85,7 @@ $settings['rebuild_access'] = TRUE;
 $settings['skip_permissions_hardening'] = TRUE;
 
 $settings['file_private_path'] = '/var/www/files-private';
-$settings['trusted_host_patterns'][] =   '^{site_shortname}.dpulp$';
+$settings['trusted_host_patterns'][] =   '^{site_shortname}.test$';
 
 /* Config for working with or testing various splits */
 

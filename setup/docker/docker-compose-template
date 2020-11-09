@@ -35,9 +35,9 @@ services:
       - .:/var/www
     working_dir: /var/www/docroot/
     environment:
-      VIRTUAL_HOST: {site_shortname}.dpulp
+      VIRTUAL_HOST: {site_shortname}.test
       DOCROOT: /var/www/docroot
-      SERVER_NAME: {site_shortname}.dpulp
+      SERVER_NAME: {site_shortname}.test
     networks:
       - internal
       - proxy
@@ -65,7 +65,7 @@ services:
       - internal
     environment:
       XDEBUG_HOST: {host_ip}
-      PHP_IDE_CONFIG: serverName={site_shortname}.dpulp
+      PHP_IDE_CONFIG: serverName={site_shortname}.test
 #  solr:
 #    image: wodby/drupal-solr:8-5.5-2.3.0
 #    environment:

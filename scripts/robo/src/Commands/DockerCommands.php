@@ -27,7 +27,14 @@ class DockerCommands extends Tasks {
   protected $config;
 
   /**
-   * Robo Command that dispatches docker setup tasks by OS.
+   * Contains docker config flags.
+   *
+   * @var string
+   */
+  protected $dockerFlags;
+
+  /**
+   * Prepare a docker-machine VM.
    *
    * @ingroup setup
    */
@@ -42,6 +49,10 @@ class DockerCommands extends Tasks {
         else {
           $io->success("All set! Ballast Docker Machine config detected at $home/.docker/machine/machines/dp-docker");
         }
+        break;
+
+      case 'Linux':
+        $io->note('This command is not needed for Linux users.');
         break;
 
       default:
@@ -60,7 +71,11 @@ class DockerCommands extends Tasks {
         if (!file_exists("$home/.docker/machine/machines/dp-docker")) {
           $io->error('You must run `composer install` followed by `ahoy harbor` before you run this Drupal site.');
         }
-        $this->setDnsProxyMac($io);
+        $this->setHttpProxyMac($io);
+        break;
+
+      case 'Linux':
+        $io->note('This command is not needed for Linux users.');
         break;
 
       default:
@@ -105,7 +120,7 @@ class DockerCommands extends Tasks {
       else {
         $io->caution('The wait timer expired waiting for front end tools to report readiness.');
       }
-      $io->success('The site can now be reached at ' . $this->config->get('site_shortname') . '.dpulp/');
+      $io->success('The site can now be reached at ' . $this->config->get('site_shortname') . '.test/');
     }
   }
 
@@ -117,7 +132,7 @@ class DockerCommands extends Tasks {
    * @aliases boot
    */
   public function bootDocker(SymfonyStyle $io) {
-    $this->setConfig();
+    $this->setInitialConditions($io);
     switch (php_uname('s')) {
       case 'Darwin':
         $home = getenv('HOME');
@@ -129,6 +144,10 @@ class DockerCommands extends Tasks {
         }
         break;
 
+      case 'Linux':
+        $io->text('Linux runs Docker natively.');
+        break;
+
       default:
         $io->error("Unable to determine your operating system.  Manual boot will be required.");
     }
@@ -138,7 +157,7 @@ class DockerCommands extends Tasks {
    * Start DNS service to resolve containers.
    */
   public function bootDns(SymfonyStyle $io) {
-    $this->setConfig();
+    $this->setInitialConditions($io);
     switch (php_uname('s')) {
       case 'Darwin':
         if ($this->setMacDnsmasq($io)) {
@@ -162,13 +181,25 @@ class DockerCommands extends Tasks {
    * Prints the database connection info for use in SQL clients.
    */
   public function connectSql(SymfonyStyle $io) {
-    $ip = $this->getDockerMachineIp($io);
+    $this->setInitialConditions($io);
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->dockerFlags = $this->getDockerMachineConfig($io);
+        $ip = $this->getDockerMachineIp($io);
+        break;
+
+      case 'Linux':
+        $this->dockerFlags = '';
+        $ip = '127.0.0.1';
+        break;
+
+      default:
+        $io->error("Unable to determine your operating system.");
+    }
     $port = $this->getSqlPort();
     $io->title('Database Info');
-    $io->text("The Docker Machine host is: $ip");
-    $io->text("Connect to port: $port");
+    $io->text("The database may be reached at: $ip:$port");
     $io->text("Username, password, and database are all 'drupal'");
-    $io->note("Both the ip and port can vary between re-boots");
   }
 
   /**
@@ -181,6 +212,29 @@ class DockerCommands extends Tasks {
   protected function setConfig() {
     if (!$this->config instanceof Config) {
       $this->config = new Config();
+    }
+  }
+
+  /**
+   * Initialize parameters and services.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object for setInitialConditions.
+   */
+  protected function setInitialConditions(SymfonyStyle $io) {
+    $this->setConfig();
+    $this->dockerFlags = '';
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->dockerFlags = $this->getDockerMachineConfig($io);
+        break;
+
+      case 'Linux':
+        $this->dockerFlags = '';
+        break;
+
+      default:
+        $io->error("Unable to determine your operating system.");
     }
   }
 
@@ -223,23 +277,23 @@ class DockerCommands extends Tasks {
     $this->setConfig();
     $root = $this->config->getProjectRoot();
     if ($ip = $this->getDockerMachineIp($io)) {
-      if (!file_exists('/etc/resolver/dpulp') ||
-        strpos(file_get_contents('/etc/resolver/dpulp'), $ip) === FALSE
+      if (!file_exists('/etc/resolver/test') ||
+        strpos(file_get_contents('/etc/resolver/test'), $ip) === FALSE
       ) {
         $collection = $this->collectionBuilder();
-        if (file_exists('/etc/resolver/dpulp')) {
+        if (file_exists('/etc/resolver/test')) {
           // Clean out the file for a clean start.
           $collection->addTask(
-            $this->taskExec('sudo rm /etc/resolver/dpulp')
+            $this->taskExec('sudo rm /etc/resolver/test')
           );
         }
         $collection->addTask(
-          $this->taskExec('cp ' . "$root/setup/dns/dpulp-template $root/setup/dns/dpulp")
+          $this->taskExec('cp ' . "$root/setup/dns/test-template $root/setup/dns/test")
         )->rollback(
-          $this->taskExec('rm -f' . "$root/setup/dns/dpulp")
+          $this->taskExec('rm -f' . "$root/setup/dns/test")
         );
         $collection->addTask(
-          $this->taskReplaceInFile("$root/setup/dns/dpulp")
+          $this->taskReplaceInFile("$root/setup/dns/test")
             ->from('{docker-dp}')
             ->to($ip)
         );
@@ -250,8 +304,8 @@ class DockerCommands extends Tasks {
         }
         $collection->addTask(
           $this->taskExecStack()
-            ->exec("sudo mv $root/setup/dns/dpulp /etc/resolver")
-            ->exec('sudo chown root:wheel /etc/resolver/dpulp')
+            ->exec("sudo mv $root/setup/dns/test /etc/resolver")
+            ->exec('sudo chown root:wheel /etc/resolver/test')
         );
         $collection->run();
       }
@@ -310,30 +364,10 @@ class DockerCommands extends Tasks {
    *
    * @param \Symfony\Component\Console\Style\SymfonyStyle $io
    *   Injected IO object.
-   *
-   * @see https://hub.docker.com/r/jwilder/nginx-proxy/
    */
-  protected function setDnsProxyMac(SymfonyStyle $io) {
-    $this->setConfig();
-    $dockerConfig = $this->getDockerMachineConfig();
+  protected function setHttpProxyMac(SymfonyStyle $io) {
     if ($this->getDockerMachineIp($io)) {
-      $io->title('Setup HTTP Proxy and .dp domain resolution.');
-      // Boot the DNS service.
-      $boot_task = $this->collectionBuilder();
-      $boot_task->addTask(
-        $this->taskExec("docker $dockerConfig network create proxynet")
-      )->rollback(
-        $this->taskExec("docker $dockerConfig network prune")
-      );
-      $command = "docker $dockerConfig run";
-      $command .= ' -d -v /var/run/docker.sock:/tmp/docker.sock:ro';
-      $command .= ' -p 80:80 --restart always --network proxynet';
-      $command .= ' --name http-proxy digitalpulp/nginx-proxy';
-      $boot_task->addTask(
-        $this->taskExec($command)
-      )->rollback(
-        $this->taskExec("docker $dockerConfig rm http-proxy")
-      );
+      $boot_task = $this->setProxyContainer($io);
       $boot_task->addTask(
         $this->taskExec('docker-machine stop dp-docker')
       );
@@ -348,6 +382,22 @@ class DockerCommands extends Tasks {
   }
 
   /**
+   * Setup the http-proxy service with dns for macOS.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @see https://hub.docker.com/r/jwilder/nginx-proxy/
+   */
+  protected function setDnsProxyLinux(SymfonyStyle $io) {
+    $boot_task = $this->setProxyContainer($io);
+    $result = $boot_task->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $io->success('Proxy container is setup.');
+    }
+  }
+
+  /**
    * Launches the dnsmasq container if it is not running.
    *
    * @param \Symfony\Component\Console\Style\SymfonyStyle $io
@@ -357,13 +407,8 @@ class DockerCommands extends Tasks {
    *   Indicates success.
    */
   protected function setMacDnsmasq(SymfonyStyle $io) {
-    $this->setConfig();
-    $dockerConfig = $this->getDockerMachineConfig();
-    if (!isset($dockerConfig)) {
-      $io->error('Unable to connect to docker machine.');
-      return FALSE;
-    }
-    $result = $this->taskExec("docker $dockerConfig inspect dnsmasq")
+    $this->setInitialConditions($io);
+    $result = $this->taskExec("docker $this->dockerFlags inspect dnsmasq")
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
       ->run();
@@ -382,7 +427,7 @@ class DockerCommands extends Tasks {
           // The container is stopped - remove so it is recreated to
           // renew the ip of the docker machine.
           $this->say('Container exists but is stopped.');
-          $this->taskExec("docker $dockerConfig rm dnsmasq")
+          $this->taskExec("docker $this->dockerFlags rm dnsmasq")
             ->printOutput(FALSE)
             ->printMetadata(FALSE)
             ->run();
@@ -391,16 +436,32 @@ class DockerCommands extends Tasks {
     }
     // Either there is no dns container or it has been removed.
     $ip = $this->getDockerMachineIp($io);
-    $command = "docker $dockerConfig run";
+    $command = "docker $this->dockerFlags run";
     $command .= ' -d --name dnsmasq';
     $command .= " --publish '53535:53/tcp' --publish '53535:53/udp'";
-    $command .= ' --cap-add NET_ADMIN  andyshinn/dnsmasq:2.76';
-    $command .= " --address=/dpulp/$ip";
+    $command .= ' --cap-add NET_ADMIN  andyshinn/dnsmasq:2.81';
+    $command .= " --address=/test/$ip";
     $result = $this->taskExec($command)
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
       ->run();
     return ($result instanceof Result && $result->wasSuccessful());
+  }
+
+  /**
+   * Helpful dns instructions for Linux.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   */
+  protected function setLinuxDnsInstructions(SymfonyStyle $io) {
+    $io->note([
+      'Since Docker containers run natively in Linux, while Ballast is running',
+      'all the hosted sites are served by a proxy to port 80.  For easy',
+      'resolution on our *.test subdomain, Linux users should setup a local',
+      'resolver that sends all *.test requests to the loopback address.',
+      'Further instructions with helpful urls are in the README.md file.',
+    ]);
   }
 
   /**
@@ -419,7 +480,6 @@ class DockerCommands extends Tasks {
       $io->error('You must start the docker service using `ahoy cast-off`');
       return FALSE;
     }
-    $dockerConfig = $this->getDockerMachineConfig();
     $root = $this->config->getProjectRoot();
     $collection = $this->collectionBuilder();
     $collection->addTask(
@@ -452,7 +512,7 @@ class DockerCommands extends Tasks {
           "$root/docker-compose.yml", TRUE)
     );
     $collection->run();
-    $command = "docker-compose $dockerConfig up -d ";
+    $command = "docker-compose $this->dockerFlags up -d ";
     $result = $this->taskExec($command)->run();
     return (isset($result) && $result->wasSuccessful());
   }
@@ -514,8 +574,7 @@ class DockerCommands extends Tasks {
     $this->setConfig();
     // Get the port string.
     $port = NULL;
-    $dockerConfig = $this->getDockerMachineConfig();
-    $result = $this->taskExec("docker-compose $dockerConfig port database 3306")
+    $result = $this->taskExec("docker-compose $this->dockerFlags port database 3306")
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
@@ -525,6 +584,38 @@ class DockerCommands extends Tasks {
       $port = trim(substr($raw, strpos($raw, ':') + 1));
     }
     return $port;
+  }
+
+  /**
+   * Helper method for setting up proxy building tasks: allows code reuse.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @see https://hub.docker.com/r/jwilder/nginx-proxy/
+   *
+   * @return \Robo\Collection\CollectionBuilder
+   *   The basic task collection for launching the http proxy.
+   */
+  protected function setProxyContainer(SymfonyStyle $io) {
+    $this->setInitialConditions($io);
+    $io->title('Setup HTTP Proxy');
+    $boot_task = $this->collectionBuilder();
+    $boot_task->addTask(
+      $this->taskExec("docker $this->dockerFlags network create proxynet")
+    )->rollback(
+      $this->taskExec("docker $this->dockerFlags network prune")
+    );
+    $command = "docker $this->dockerFlags run";
+    $command .= ' -d -v /var/run/docker.sock:/tmp/docker.sock:ro';
+    $command .= ' -p 80:80 --restart always --network proxynet';
+    $command .= ' --name http-proxy digitalpulp/nginx-proxy';
+    $boot_task->addTask(
+      $this->taskExec($command)
+    )->rollback(
+      $this->taskExec("docker $this->dockerFlags rm http-proxy")
+    );
+    return $boot_task;
   }
 
 }

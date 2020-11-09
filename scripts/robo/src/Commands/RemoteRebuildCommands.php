@@ -106,6 +106,10 @@ class RemoteRebuildCommands extends Tasks {
         $this->dockerFlags = $this->getDockerMachineConfig($io);
         break;
 
+      case 'Linux':
+        $this->dockerFlags = '';
+        break;
+
       default:
         $io->error("Unable to determine your operating system.");
     }

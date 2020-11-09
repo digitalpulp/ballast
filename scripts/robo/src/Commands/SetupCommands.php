@@ -51,22 +51,31 @@ class SetupCommands extends Tasks {
     $this->setConfig();
     switch (php_uname('s')) {
       case 'Darwin':
-        $this->setMacRequirements();
-        $this->setPrecommitHooks();
-        $io->title("Next Steps");
-        $io->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
+        if (!$this->getMacReadiness($io)) {
+          break;
+        }
+        $this->setAhoyCommands($io, 'mac');
         $io->note('All the docker projects need to be in the same parent folder.  Because of the nature of NFS, this folder cannot contain any older vagrant based projects. If needed, create a directory and move this project before continuing.');
-        $io->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
-        $io->listing([
-          'ahoy harbor',
-          'ahoy cast-off',
-          'ahoy rebuild',
-        ]);
         break;
 
+      case 'Linux':
+        if (!$this->getLinuxReadiness($io)) {
+          break;
+        }
+        $this->setAhoyCommands($io, 'linux');
       default:
         $io->error("Unable to determine your operating system.  Manual installation will be required.");
+        return;
     }
+    $this->setPrecommitHooks($io);
+    $io->title("Next Steps");
+    $io->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
+    $io->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
+    $io->listing([
+      'ahoy harbor',
+      'ahoy cast-off',
+      'ahoy rebuild',
+    ]);
   }
 
   /**
@@ -127,7 +136,7 @@ class SetupCommands extends Tasks {
     );
     if (file_exists("$drupal/sites/default/settings.php") &&
       !preg_match(
-        '|\/\*\sSettings added by robo setup:drupal|',
+        '|/\*\sSettings added by robo setup:drupal|',
         file_get_contents("$drupal/sites/default/settings.php")
       )
     ) {
@@ -185,16 +194,88 @@ class SetupCommands extends Tasks {
   }
 
   /**
+   * MacOS Readiness check.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @return bool
+   *   Mac is ready for Ballast.
+   */
+  protected function getMacReadiness(SymfonyStyle $io) {
+    $ready = FALSE;
+    $this->setConfig();
+    $io->title('Mac Setup for Ballast');
+    $required = $this->getRequirements($io, 'mac');
+    if (count($required) > 0) {
+      $io->warning('Your Mac is missing required software to use Ballast');
+      $io->text('The following packages need to be installed:');
+      $io->listing(array_column($required, 'name'));
+      $io->note('You can use homebrew to install each of these:');
+      $commands = [];
+      foreach ($required as $package => $settings) {
+        $command = '';
+        if (!empty($settings['tap'])) {
+          $command = 'brew tap ' . $settings['tap'] . '&& ';
+        }
+        $command .= 'brew ' . ($settings['cask'] ? 'cask ' : '') . 'install ' . $package;
+        $commands[] = $command;
+      }
+      $io->listing($commands);
+    }
+    else {
+      $this->io->success("Your Mac has the required software to use Ballast.");
+      $ready = TRUE;
+    }
+    return $ready;
+  }
+
+  /**
    * MacOS Initial setup.
    *
    * @param \Symfony\Component\Console\Style\SymfonyStyle $io
    *   Injected IO object.
+   *
+   * @return bool
+   *   Mac is ready for Ballast.
    */
-  protected function setMacRequirements(SymfonyStyle $io) {
+  protected function getLinuxReadiness(SymfonyStyle $io) {
+    $ready = FALSE;
     $this->setConfig();
-    $io->title('Mac Setup for Ballast');
+    $io->title('Linux Setup for Ballast');
+    $required = $this->getRequirements($io, 'linux');
+    if (count($required) > 0) {
+      $io->warning('Your system is missing required software to use Ballast');
+      $io->text('The following packages need to be installed:');
+      $io->listing(array_column($required, 'name'));
+      $io->note('Here are urls where you can find more info:');
+      $urls = [];
+      foreach ($required as $settings) {
+        $urls[] = $settings['url'];
+      }
+      $io->listing($urls);
+    }
+    else {
+      $this->io->success("Your system has the required software to use Ballast.");
+      $ready = TRUE;
+    }
+    return $ready;
+  }
+
+  /**
+   * Helper method to move an OS specific ahoy command file into place.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   * @param string $system
+   *   Designates the system.
+   */
+  protected function setAhoyCommands(SymfonyStyle $io, $system) {
+    // Ahoy is installed.
+    $source_path = $this->config->getProjectRoot() . "/setup/ahoy/$system.ahoy.yml";
+    $destination_path = $this->config->getProjectRoot() . '/.ahoy.yml';
     $result = $this->taskFilesystemStack()
-      ->copy($this->config->getProjectRoot() . '/setup/ahoy/mac.ahoy.yml', $this->config->getProjectRoot() . '/.ahoy.yml')
+      ->copy($source_path, $destination_path)
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
@@ -204,54 +285,7 @@ class SetupCommands extends Tasks {
       $io->error('Unable to move ahoy.yml file into place.');
       $io->text('Error is:');
       $io->text($result->getMessage());
-    }
-    $this->taskExec('brew update')
-      ->printOutput(FALSE)
-      ->printMetadata(FALSE);
-    $prereqs = $this->getPrerequisites('mac');
-    $io->section('Check for Prerequisites');
-    $ready = TRUE;
-    foreach ($prereqs as $short_name => $full_name) {
-      if (!$this->getIsInstalled($short_name)) {
-        $io->error($full_name . " is not available.  Check the project README for preconditions and instructions.");
-        $ready = FALSE;
-      }
-    }
-    if (!$ready) {
-      // Stop setup so the user can prepare the Mac.
-      return;
-    }
-    $required = $this->getRequirements('mac');
-    if (count($required) > 0) {
-      $io->text('The following packages need to be installed:');
-      $io->listing(array_column($required, 'name'));
-      $collection = $this->collectionBuilder();
-      foreach ($required as $package => $settings) {
-        $collection->progressMessage('Installing ' . $settings['name']);
-        if (!empty($settings['tap'])) {
-          $collection->addTask(
-            $this->taskExec('brew tap ' . $settings['tap'])
-          )->rollback(
-            $this->taskExec('brew untap ' . $settings['tap'])
-          );
-        }
-        $collection->addTask(
-          $this->taskExec('brew ' . ($settings['cask'] ? 'cask ' : '') . 'install ' . $package)
-        )->rollback(
-          $this->taskExec('brew ' . ($settings['cask'] ? 'cask ' : '') . "uninstall $package")
-        );
-      }
-
-      $result = $collection->run();
-    }
-    if ((isset($result) && $result instanceof Result && $result->wasSuccessful())) {
-      $this->io->success("Prerequisites prepared for Ballast.");
-    }
-    elseif (count($required) == 0) {
-      $this->io->success("Your Mac was already prepared for Ballast.");
-    }
-    else {
-      $io->error("Something went wrong.  Changes have been rolled back.");
+      $io->warning("You will need to copy and move this file yourself from $source_path to $destination_path");
     }
   }
 
@@ -265,7 +299,7 @@ class SetupCommands extends Tasks {
     $this->setConfig();
     $root = $this->config->getProjectRoot();
     if (!file_exists("$root/.git")) {
-      $io->note('Git repository not found.  Precommit will be setup on a later composer install after a .git directory is present.');
+      $io->error('Git repository not found.  Pre-commit cannot be setup until this project is under version control.');
       return;
     }
     $io->section('Configuring pre-commit linting tool.');
@@ -332,52 +366,6 @@ class SetupCommands extends Tasks {
   }
 
   /**
-   * Gets the packages installed using Homebrew.
-   *
-   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
-   *   Injected IO object.
-   *
-   * @return array
-   *   Associative array keyed by package short name.
-   */
-  protected function getBrewedComponents(SymfonyStyle $io) {
-    $io->comment('Getting the packages installed with Homebrew');
-    $result = $this->taskExec('brew info --json=v1 --installed')
-      ->printOutput(FALSE)
-      ->printMetadata(FALSE)
-      ->run();
-    $io->newLine();
-    if ($result instanceof Result) {
-      $rawJson = json_decode($result->getMessage(), 'assoc');
-      $parsed = [];
-      foreach ($rawJson as $package) {
-        $parsed[$package['name']] = $package;
-        unset($parsed[$package['name']]['name']);
-      }
-      return $parsed;
-    }
-    throw new UnexpectedValueException("taskExec() failed to return a valid Result object in getBrewedComponents()");
-  }
-
-  /**
-   * Get the prerequisites by machine type.
-   *
-   * @param string $machine
-   *   The machine key.
-   *
-   * @return mixed
-   *   Associative array of prerequisites keyed by short name.
-   */
-  protected function getPrerequisites($machine) {
-    $prerequisites = [
-      'mac' => [
-        'brew' => 'Homebrew',
-      ],
-    ];
-    return $prerequisites[$machine];
-  }
-
-  /**
    * Get the required packages by machine name.
    *
    * @param \Symfony\Component\Console\Style\SymfonyStyle $io
@@ -425,19 +413,39 @@ class SetupCommands extends Tasks {
             'cask' => FALSE,
           ],
         ];
-        $brewed = $this->getBrewedComponents();
-        $io->section('Checking for Installed Requirements');
-        foreach ($required as $package => $full_name) {
-          if (isset($brewed[$package]) || ($this->getIsInstalled($package))) {
-            // Installed.  Unset.
-            unset($required[$package]);
-          }
-        }
-        return $required;
+        break;
+
+      case 'linux':
+        $required = [
+          'ahoy' => [
+            'name' => 'Ahoy',
+            'url' => 'https://github.com/ahoy-cli/ahoy',
+          ],
+          'docker' => [
+            'name' => 'Docker',
+            'url' => 'https://docs.docker.com/engine/install/',
+          ],
+          'docker-compose' => [
+            'name' => 'Docker Compose',
+            'url' => 'https://docs.docker.com/compose/install/',
+          ],
+          'pre-commit' => [
+            'name' => 'pre-commit by Yelp',
+            'url' => 'https://pre-commit.com/#install',
+          ],
+        ];
 
       default:
         return [];
     }
+    $io->section('Checking for Installed Requirements');
+    foreach ($required as $package => $details) {
+      if ($this->getIsInstalled($package)) {
+        // Installed.  Unset.
+        unset($required[$package]);
+      }
+    }
+    return $required;
   }
 
 }

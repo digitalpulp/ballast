@@ -2,6 +2,7 @@
 
 namespace Ballast\Commands;
 
+use Robo\Exception\TaskExitException;
 use Robo\Result;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -45,6 +46,10 @@ trait DockerMachineTrait {
         // Workaround for docker-compose:1.20:
         $this->dockerConfig = str_replace('-H=', '--host ',
           $this->dockerConfig);
+      }
+      else {
+        $io->error('Unable to connect to docker machine.');
+        throw new TaskExitException('Unable to connect to docker machine.');
       }
     }
     return $this->dockerConfig;
