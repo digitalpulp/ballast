@@ -77,8 +77,13 @@ class SetupCommands extends Tasks {
         }
         $this->setPrecommitHooks($io);
         $this->setAhoyCommands($io, 'linux');
-        $proxySet = $this->setProxyContainer($io);
-        if (!$proxySet) {
+        $boot_task = $this->setProxyContainer($io);
+        $result = $boot_task->run();
+        if ($result instanceof Result && $result->wasSuccessful()) {
+          $io->success('Proxy container is setup.');
+          return TRUE;
+        }
+        else {
           $io->error('Could not setup your http-proxy container.');
           $io->note([
             'Check that the docker system is set to run as service',
