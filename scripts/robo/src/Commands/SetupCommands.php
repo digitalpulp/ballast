@@ -259,6 +259,12 @@ class SetupCommands extends Tasks {
     }
     else {
       $io->success("Your system has the required software to use Ballast.");
+      $io->note([
+        'Be sure to configure the docker system to run as service',
+        'Check your Linux distribution for more details on how to do so:',
+        '`man dockerd` or use a search engine to search for your linux distro',
+        'name + `dockerd`',
+      ]);
       $ready = TRUE;
     }
     return $ready;
