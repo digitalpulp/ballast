@@ -17,7 +17,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 class DockerCommands extends Tasks {
 
-  use FrontEndTrait, DockerMachineTrait;
+  use FrontEndTrait, DockerMachineTrait, ProxyTrait;
 
   /**
    * Config Utility (setter injected).
@@ -71,11 +71,12 @@ class DockerCommands extends Tasks {
         if (!file_exists("$home/.docker/machine/machines/dp-docker")) {
           $io->error('You must run `composer install` followed by `ahoy harbor` before you run this Drupal site.');
         }
+        $this->setInitialConditions($io);
         $this->setHttpProxyMac($io);
         break;
 
       case 'Linux':
-        $this->setHttpProxyLinux($io);
+        $io->note('This command is not needed for Linux users.');
         break;
 
       default:
@@ -382,24 +383,6 @@ class DockerCommands extends Tasks {
   }
 
   /**
-   * Setup the http-proxy service with dns for macOS.
-   *
-   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
-   *   Injected IO object.
-   *
-   * @see https://hub.docker.com/r/jwilder/nginx-proxy/
-   */
-  protected function setHttpProxyLinux(SymfonyStyle $io) {
-    $boot_task = $this->setProxyContainer($io);
-    $result = $boot_task->run();
-    if ($result instanceof Result && $result->wasSuccessful()) {
-      $io->success('Proxy container is setup.');
-      return TRUE;
-    }
-    return FALSE;
-  }
-
-  /**
    * Launches the dnsmasq container if it is not running.
    *
    * @param \Symfony\Component\Console\Style\SymfonyStyle $io
@@ -586,38 +569,6 @@ class DockerCommands extends Tasks {
       $port = trim(substr($raw, strpos($raw, ':') + 1));
     }
     return $port;
-  }
-
-  /**
-   * Helper method for setting up proxy building tasks: allows code reuse.
-   *
-   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
-   *   Injected IO object.
-   *
-   * @see https://hub.docker.com/r/jwilder/nginx-proxy/
-   *
-   * @return \Robo\Collection\CollectionBuilder
-   *   The basic task collection for launching the http proxy.
-   */
-  protected function setProxyContainer(SymfonyStyle $io) {
-    $this->setInitialConditions($io);
-    $io->title('Setup HTTP Proxy');
-    $boot_task = $this->collectionBuilder();
-    $boot_task->addTask(
-      $this->taskExec("docker $this->dockerFlags network create proxynet")
-    )->rollback(
-      $this->taskExec("docker $this->dockerFlags network prune")
-    );
-    $command = "docker $this->dockerFlags run";
-    $command .= ' -d -v /var/run/docker.sock:/tmp/docker.sock:ro';
-    $command .= ' -p 80:80 --restart always --network proxynet';
-    $command .= ' --name http-proxy digitalpulp/nginx-proxy';
-    $boot_task->addTask(
-      $this->taskExec($command)
-    )->rollback(
-      $this->taskExec("docker $this->dockerFlags rm http-proxy")
-    );
-    return $boot_task;
   }
 
 }

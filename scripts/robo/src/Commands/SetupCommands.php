@@ -17,6 +17,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 class SetupCommands extends Tasks {
 
+  use ProxyTrait;
+
   /**
    * Config Utility (singleton).
    *
@@ -73,10 +75,9 @@ class SetupCommands extends Tasks {
         if (!$this->getLinuxReadiness($io)) {
           return;
         }
-        $dockerTasks = new DockerCommands();
         $this->setPrecommitHooks($io);
         $this->setAhoyCommands($io, 'linux');
-        $proxySet = $dockerTasks->dockerProxyCreate($io);
+        $proxySet = $this->setProxyContainer($io);
         if (!$proxySet) {
           $io->error('Could not setup your http-proxy container.');
           $io->note([
