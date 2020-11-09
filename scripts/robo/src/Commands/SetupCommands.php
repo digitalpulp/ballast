@@ -434,6 +434,7 @@ class SetupCommands extends Tasks {
             'url' => 'https://pre-commit.com/#install',
           ],
         ];
+        break;
 
       default:
         return [];
