@@ -336,7 +336,7 @@ class SetupCommands extends Tasks {
     }
     $result = $collection->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
-      $this->io->success("Hooks for commit-msg and pre-commit linting have been installed.");
+      $io->success("Hooks for commit-msg and pre-commit linting have been installed.");
     }
     else {
       $io->error("Something went wrong.  Changes have been rolled back.");
