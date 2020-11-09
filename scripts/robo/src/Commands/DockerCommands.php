@@ -75,7 +75,7 @@ class DockerCommands extends Tasks {
         break;
 
       case 'Linux':
-        $io->note('This command is not needed for Linux users.');
+        $this->setHttpProxyLinux($io);
         break;
 
       default:
@@ -389,7 +389,7 @@ class DockerCommands extends Tasks {
    *
    * @see https://hub.docker.com/r/jwilder/nginx-proxy/
    */
-  protected function setDnsProxyLinux(SymfonyStyle $io) {
+  protected function setHttpProxyLinux(SymfonyStyle $io) {
     $boot_task = $this->setProxyContainer($io);
     $result = $boot_task->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
