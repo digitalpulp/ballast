@@ -461,7 +461,7 @@ class DockerCommands extends Tasks {
       $io->error('You must start the docker service using `ahoy cast-off`');
       return FALSE;
     }
-    $result = $this->setDockerComposePlaceholders($ip);
+    $result = $this->setDockerComposePlaceholders($this->getHostIp($ip));
     return ($result instanceof Result && $result->wasSuccessful());
   }
 
@@ -583,7 +583,7 @@ class DockerCommands extends Tasks {
     $collection->addTask(
       $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
         ->from('{host_ip}')
-        ->to($this->getHostIp($ip))
+        ->to($ip)
     );
     // Move into place or overwrite the docker-compose.yml.
     $collection->addTask(
