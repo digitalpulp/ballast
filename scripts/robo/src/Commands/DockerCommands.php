@@ -109,18 +109,14 @@ class DockerCommands extends Tasks {
         }
         break;
 
+      case 'Linux':
+        $launched = $this->setDockerComposeLinux($io);
+        break;
+
       default:
         $io->error("Unable to determine your operating system.  Manual docker startup will be required.");
     }
     if ($launched) {
-      $io->text('Please stand by while the front end tools initialize.');
-      if ($this->getFrontEndStatus(TRUE)) {
-        $io->text('Front end tools are ready.');
-        $this->setClearFrontEndFlags();
-      }
-      else {
-        $io->caution('The wait timer expired waiting for front end tools to report readiness.');
-      }
       $io->success('The site can now be reached at ' . $this->config->get('site_shortname') . '.test/');
     }
   }
@@ -465,41 +461,24 @@ class DockerCommands extends Tasks {
       $io->error('You must start the docker service using `ahoy cast-off`');
       return FALSE;
     }
-    $root = $this->config->getProjectRoot();
-    $collection = $this->collectionBuilder();
-    $collection->addTask(
-      $this->taskFilesystemStack()
-        ->copy("$root/setup/docker/docker-compose-template",
-          "$root/setup/docker/docker-compose.yml")
-    )->rollback(
-      $this->taskFilesystemStack()
-        ->remove("$root/setup/docker/docker-compose.yml")
-    );
-    $collection->addTask(
-      $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
-        ->from('{site_shortname}')
-        ->to($this->config->get('site_shortname'))
-    );
-    $collection->addTask(
-      $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
-        ->from('{site_theme_name}')
-        ->to($this->config->get('site_theme_name'))
-    );
-    $collection->addTask(
-      $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
-        ->from('{host_ip}')
-        ->to($this->getHostIp($ip))
-    );
-    // Move into place or overwrite the docker-compose.yml.
-    $collection->addTask(
-      $this->taskFilesystemStack()
-        ->rename("$root/setup/docker/docker-compose.yml",
-          "$root/docker-compose.yml", TRUE)
-    );
-    $collection->run();
-    $command = "docker-compose $this->dockerFlags up -d ";
-    $result = $this->taskExec($command)->run();
-    return (isset($result) && $result->wasSuccessful());
+    $result = $this->setDockerComposePlaceholders($ip);
+    return ($result instanceof Result && $result->wasSuccessful());
+  }
+
+  /**
+   * Linux specific command to start docker-compose services.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @return bool
+   *   Indicates success.
+   */
+  protected function setDockerComposeLinux(SymfonyStyle $io) {
+    $this->setConfig();
+    $ip = 'host.docker.internal';
+    $result = $this->setDockerComposePlaceholders($ip);
+    return ($result instanceof Result && $result->wasSuccessful());
   }
 
   /**
@@ -569,6 +548,53 @@ class DockerCommands extends Tasks {
       $port = trim(substr($raw, strpos($raw, ':') + 1));
     }
     return $port;
+  }
+
+  /**
+   * Helper method for code reuse in preparing docker-compose.yml.
+   *
+   * @param string $ip
+   *   The ip address for xdebug.
+   *
+   * @return \Robo\Result
+   *   The result of the task stack.
+   */
+  protected function setDockerComposePlaceholders($ip) {
+    $root = $this->config->getProjectRoot();
+    $collection = $this->collectionBuilder();
+    $collection->addTask(
+      $this->taskFilesystemStack()
+        ->copy("$root/setup/docker/docker-compose-template",
+          "$root/setup/docker/docker-compose.yml")
+    )->rollback(
+      $this->taskFilesystemStack()
+        ->remove("$root/setup/docker/docker-compose.yml")
+    );
+    $collection->addTask(
+      $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
+        ->from('{site_shortname}')
+        ->to($this->config->get('site_shortname'))
+    );
+    $collection->addTask(
+      $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
+        ->from('{site_theme_name}')
+        ->to($this->config->get('site_theme_name'))
+    );
+    $collection->addTask(
+      $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
+        ->from('{host_ip}')
+        ->to($this->getHostIp($ip))
+    );
+    // Move into place or overwrite the docker-compose.yml.
+    $collection->addTask(
+      $this->taskFilesystemStack()
+        ->rename("$root/setup/docker/docker-compose.yml",
+          "$root/docker-compose.yml", TRUE)
+    );
+    $collection->run();
+    $command = "docker-compose $this->dockerFlags up -d ";
+    $result = $this->taskExec($command)->run();
+    return $result;
   }
 
 }
