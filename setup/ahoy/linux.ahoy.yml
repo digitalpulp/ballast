@@ -19,14 +19,6 @@ commands:
   log:
     usage: Tail a service log. Specify one of [database, php, web, front-end, cli]
     cmd: docker-compose logs -f --tail=10 "$@"
-  cast-off:
-    usage: Launch the global tools needed for local development. Run this command once after you boot your computer.
-    cmd: |
-      php scripts/robo/BallastRunner.php boot && #make sure boot is successful
-      php scripts/robo/BallastRunner.php "boot:dns"
-  harbor:
-    usage: Build the harbor for your docks.  Run this command once after the first time you set up a Ballast project.
-    cmd: php scripts/robo/BallastRunner.php "docker:proxy-create"
   launch:
     usage: Launch this project site.
     cmd: php scripts/robo/BallastRunner.php docker:compose

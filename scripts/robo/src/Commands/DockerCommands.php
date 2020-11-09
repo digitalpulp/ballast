@@ -394,7 +394,9 @@ class DockerCommands extends Tasks {
     $result = $boot_task->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
       $io->success('Proxy container is setup.');
+      return TRUE;
     }
+    return FALSE;
   }
 
   /**

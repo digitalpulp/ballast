@@ -55,38 +55,46 @@ class SetupCommands extends Tasks {
         if (!$this->getMacReadiness($io)) {
           return;
         }
+        $this->setPrecommitHooks($io);
         $this->setAhoyCommands($io, 'mac');
         $io->note('All the docker projects need to be in the same parent folder.  Because of the nature of NFS, this folder cannot contain any older vagrant based projects. If needed, create a directory and move this project before continuing.');
+
+        $io->title("Next Steps");
+        $io->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
+        $io->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
+        $io->definitionList([
+          'ahoy harbor' => 'Creates and configures docker containers that are part of our infrastructure. Only needs to be run once.',
+          'ahoy cast-off' => 'Starts the Ballast system. Only needs to be run once after you start up your Mac.',
+          'ahoy rebuild' => 'Pulls a database copy from a remote server.  Uses the aliases set in `drush/sites`',
+        ]);
         break;
 
       case 'Linux':
         if (!$this->getLinuxReadiness($io)) {
           return;
         }
+        $dockerTasks = new DockerCommands();
+        $this->setPrecommitHooks($io);
         $this->setAhoyCommands($io, 'linux');
+        $proxySet = $dockerTasks->dockerProxyCreate($io);
+        if (!$proxySet) {
+          $io->error('Could not setup your http-proxy container.');
+          $io->note([
+            'Check that the docker system is set to run as service',
+            'You may find information on the man page, `man dockerd`',
+            'or use a search engine to search for your',
+            'linux distro name + `dockerd`',
+          ]);
+        }
+        $io->title("Next Steps");
+        $io->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
+        $io->text('For example, `ahoy launch` will bring up the site for this project.');
         break;
 
       default:
         $io->error("Unable to determine your operating system.  Manual installation will be required.");
         return;
     }
-    $this->setPrecommitHooks($io);
-    $io->title("Next Steps");
-    if ($os == 'Linux') {
-      $io->note([
-        'Be sure to configure the docker system to run as service',
-        'Check your Linux distribution for more details on how to do so:',
-        '`man dockerd` or use a search engine to search for your linux distro',
-        'name + `dockerd`',
-      ]);
-    }
-    $io->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
-    $io->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
-    $io->listing([
-      'ahoy harbor',
-      'ahoy cast-off',
-      'ahoy rebuild',
-    ]);
   }
 
   /**
