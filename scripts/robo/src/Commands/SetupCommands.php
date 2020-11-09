@@ -52,7 +52,7 @@ class SetupCommands extends Tasks {
     switch (php_uname('s')) {
       case 'Darwin':
         if (!$this->getMacReadiness($io)) {
-          break;
+          return;
         }
         $this->setAhoyCommands($io, 'mac');
         $io->note('All the docker projects need to be in the same parent folder.  Because of the nature of NFS, this folder cannot contain any older vagrant based projects. If needed, create a directory and move this project before continuing.');
@@ -60,9 +60,11 @@ class SetupCommands extends Tasks {
 
       case 'Linux':
         if (!$this->getLinuxReadiness($io)) {
-          break;
+          return;
         }
         $this->setAhoyCommands($io, 'linux');
+        break;
+
       default:
         $io->error("Unable to determine your operating system.  Manual installation will be required.");
         return;
@@ -355,6 +357,7 @@ class SetupCommands extends Tasks {
   protected function getIsInstalled(SymfonyStyle $io, $package) {
     $io->comment("Checking installation of " . $package . "...");
     $result = $this->taskExec('which -s ' . $package)
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
       ->run();
