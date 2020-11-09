@@ -441,7 +441,7 @@ class SetupCommands extends Tasks {
     }
     $io->section('Checking for Installed Requirements');
     foreach ($required as $package => $details) {
-      if ($this->getIsInstalled($package)) {
+      if ($this->getIsInstalled($io, $package)) {
         // Installed.  Unset.
         unset($required[$package]);
       }
