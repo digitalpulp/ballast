@@ -256,7 +256,7 @@ class SetupCommands extends Tasks {
       $io->listing($urls);
     }
     else {
-      $this->io->success("Your system has the required software to use Ballast.");
+      $io->success("Your system has the required software to use Ballast.");
       $ready = TRUE;
     }
     return $ready;
