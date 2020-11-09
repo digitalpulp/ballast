@@ -49,7 +49,8 @@ class SetupCommands extends Tasks {
    */
   public function setupPrerequisites(SymfonyStyle $io) {
     $this->setConfig();
-    switch (php_uname('s')) {
+    $os = php_uname('s');
+    switch ($os) {
       case 'Darwin':
         if (!$this->getMacReadiness($io)) {
           return;
@@ -71,6 +72,14 @@ class SetupCommands extends Tasks {
     }
     $this->setPrecommitHooks($io);
     $io->title("Next Steps");
+    if ($os == 'Linux') {
+      $io->note([
+        'Be sure to configure the docker system to run as service',
+        'Check your Linux distribution for more details on how to do so:',
+        '`man dockerd` or use a search engine to search for your linux distro',
+        'name + `dockerd`',
+      ]);
+    }
     $io->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
     $io->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
     $io->listing([
@@ -259,12 +268,6 @@ class SetupCommands extends Tasks {
     }
     else {
       $io->success("Your system has the required software to use Ballast.");
-      $io->note([
-        'Be sure to configure the docker system to run as service',
-        'Check your Linux distribution for more details on how to do so:',
-        '`man dockerd` or use a search engine to search for your linux distro',
-        'name + `dockerd`',
-      ]);
       $ready = TRUE;
     }
     return $ready;
