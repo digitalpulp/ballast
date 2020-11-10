@@ -15,9 +15,8 @@ services:
     ports:
       - "3306"
   php:
-    # image: digitalpulp/php:5.6-alpine-fpm-1.0.3
-    # image: digitalpulp/php:7.1-alpine-fpm-1.0.10
-    image: digitalpulp/php:7.2-alpine-fpm-1.0.3
+    # image: digitalpulp/php:7.3.24
+    image: digitalpulp/php:7.4.12
     volumes:
       - .:/var/www
     working_dir: /var/www/docroot/
@@ -53,7 +52,8 @@ services:
       - internal
     working_dir: /var/www/docroot/themes/custom/{site_theme_name}
   cli:
-    image: digitalpulp/cli:7.2-alpine-cli-1.0.1
+  # image: digitalpulp/cli:7.3.24
+    image: digitalpulp/cli:7.4.12
     depends_on:
       - database
       - php
