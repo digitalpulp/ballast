@@ -2,7 +2,7 @@ version: "3"
 
 services:
   database:
-    image: digitalpulp/mariadb:10.3
+    image: digitalpulp/mariadb:10.3.22
     volumes:
       - db:/var/lib/mysql
     environment:
