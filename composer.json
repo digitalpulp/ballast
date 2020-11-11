@@ -58,25 +58,14 @@
     "autoload": {
         "psr-4": {
           "Ballast\\": "scripts/robo/src"
-        },
-        "classmap": [
-            "scripts/composer/ScriptHandler.php"
-        ]
+        }
     },
     "scripts": {
       "robo": "@php scripts/robo/BallastRunner.php --ansi",
-      "pre-install-cmd": [
-        "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
-      ],
-      "pre-update-cmd": [
-        "DrupalProject\\composer\\ScriptHandler::checkComposerVersion"
-      ],
       "post-install-cmd": [
-        "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
         "composer robo setup:instructions"
       ],
       "post-update-cmd": [
-        "DrupalProject\\composer\\ScriptHandler::createRequiredFiles",
         "composer robo setup:instructions"
       ]
     },

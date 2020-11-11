@@ -11,14 +11,14 @@
 // This is the default - same as settings.local.php
 // Get the path to the parent of docroot.
 $dir = dirname(DRUPAL_ROOT);
-$config_directories[CONFIG_SYNC_DIRECTORY] = $dir . '/config';
+$settings['config_sync_directory'] = $dir . '/config';
 
 
 if (isset($_ENV['PROBO_ENVIRONMENT'])) {
-  $settings['trusted_host_patterns'] = array(
+  $settings['trusted_host_patterns'] = [
     '^localhost$',
     '^.+\.probo\.build$',
-  );
+  ];
   if (isset($_ENV['SRC_DIR'])) {
     $private_path = $_ENV['SRC_DIR'] . '/files-private';
     $settings['file_private_path'] = $private_path;

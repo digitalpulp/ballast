@@ -35,7 +35,10 @@ NFS they must not be in the chosen folder.
     NFS export.
     * The easiest way forward is
 to create a new folder such as `~/DockerSites`.
-- **Linux**: You will need to configure your system to forward all requests for `*.test` to the loop back address
+- **Linux**: File permissions are simplest if your user belongs to the same _group_ as the webserver.
+Nginx runs as group id 101.  If this group id does not exist, you should create it and add your user to it.
+Setting any files that need to be writeable can then be set to 775 (group writeable) so they are writeable by
+Drupal. You will need to configure your system to forward all requests for `*.test` to the loop back address
 (localhost). We recommend using [dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html), which is well known
 and should be available via your package manager.  The key task is to set `address=/test/127.0.0.1` in the
 dnsmasq configuration. Here are some links to helpful blog posts for some common
