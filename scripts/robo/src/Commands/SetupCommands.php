@@ -111,12 +111,15 @@ class SetupCommands extends Tasks {
     // Set some simple variables for string expansion.
     $drupal = $this->config->getDrupalRoot();
     $project = $this->config->getProjectRoot();
-    $this->taskFilesystemStack()->chmod("$drupal/sites/default", 0755)
-      ->run();
-    $this->taskFilesystemStack()
-      ->chmod("$drupal/sites/default/settings.php", 0755)
-      ->run();
     $collection = $this->collectionBuilder();
+    $collection->addTask(
+      $this->taskFilesystemStack()
+        ->copy("$drupal/sites/default/default.settings.php",
+          "$drupal/sites/default/settings.php", TRUE)
+    )->rollback(
+      $this->taskFilesystemStack()
+        ->remove("$drupal/sites/default/settings.acquia.php")
+    );
     $collection->addTask(
       $this->taskFilesystemStack()
         ->copy("$project/setup/drupal/settings.acquia.php",
@@ -176,6 +179,11 @@ class SetupCommands extends Tasks {
     }
     $result = $collection->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->taskFilesystemStack()->chmod("$drupal/sites/default", 0755)
+        ->run();
+      $this->taskFilesystemStack()
+        ->chmod("$drupal/sites/default/settings.php", 0755)
+        ->run();
       $io->success('Drupal settings are configured.');
     }
   }
