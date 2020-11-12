@@ -2,7 +2,7 @@ version: "3"
 
 services:
   database:
-    image: digitalpulp/mariadb:10.2
+    image: digitalpulp/mariadb:10.3.22
     volumes:
       - db:/var/lib/mysql
     environment:
@@ -15,9 +15,8 @@ services:
     ports:
       - "3306"
   php:
-    # image: digitalpulp/php:5.6-alpine-fpm-1.0.3
-    # image: digitalpulp/php:7.1-alpine-fpm-1.0.10
-    image: digitalpulp/php:7.2-alpine-fpm-1.0.3
+    # image: digitalpulp/php:7.3.24
+    image: digitalpulp/php:7.4.12
     volumes:
       - .:/var/www
     working_dir: /var/www/docroot/
@@ -35,9 +34,9 @@ services:
       - .:/var/www
     working_dir: /var/www/docroot/
     environment:
-      VIRTUAL_HOST: {site_shortname}.dpulp
+      VIRTUAL_HOST: {site_shortname}.test
       DOCROOT: /var/www/docroot
-      SERVER_NAME: {site_shortname}.dpulp
+      SERVER_NAME: {site_shortname}.test
     networks:
       - internal
       - proxy
@@ -53,7 +52,8 @@ services:
       - internal
     working_dir: /var/www/docroot/themes/custom/{site_theme_name}
   cli:
-    image: digitalpulp/cli:7.2-alpine-cli-1.0.1
+  # image: digitalpulp/cli:7.3.24
+    image: digitalpulp/cli:7.4.12
     depends_on:
       - database
       - php
@@ -65,7 +65,7 @@ services:
       - internal
     environment:
       XDEBUG_HOST: {host_ip}
-      PHP_IDE_CONFIG: serverName={site_shortname}.dpulp
+      PHP_IDE_CONFIG: serverName={site_shortname}.test
 #  solr:
 #    image: wodby/drupal-solr:8-5.5-2.3.0
 #    environment:

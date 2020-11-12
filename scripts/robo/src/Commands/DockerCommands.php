@@ -6,16 +6,18 @@ use Ballast\Utilities\Config;
 use Robo\Tasks;
 use Robo\Result;
 use Robo\Contract\VerbosityThresholdInterface;
-use UnexpectedValueException;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Robo commands that manage docker interactions.
+ *
+ * phpcs:disable Drupal.Commenting.FunctionComment.ParamMissingDefinition
  *
  * @package Ballast\Commands
  */
 class DockerCommands extends Tasks {
 
-  use FrontEndTrait, DockerMachineTrait;
+  use FrontEndTrait, DockerMachineTrait, ProxyTrait;
 
   /**
    * Config Utility (setter injected).
@@ -25,48 +27,60 @@ class DockerCommands extends Tasks {
   protected $config;
 
   /**
-   * Robo Command that dispatches docker setup tasks by OS.
+   * Contains docker config flags.
+   *
+   * @var string
+   */
+  protected $dockerFlags;
+
+  /**
+   * Prepare a docker-machine VM.
    *
    * @ingroup setup
    */
-  public function dockerInitialize() {
+  public function dockerInitialize(SymfonyStyle $io) {
     $this->setConfig();
     switch (php_uname('s')) {
       case 'Darwin':
         $home = getenv('HOME');
         if (!file_exists("$home/.docker/machine/machines/dp-docker")) {
-          $this->setDockerMac();
+          $this->setDockerMac($io);
         }
         else {
-          $this->io()
-            ->success("All set! Ballast Docker Machine config detected at $home/.docker/machine/machines/dp-docker");
+          $io->success("All set! Ballast Docker Machine config detected at $home/.docker/machine/machines/dp-docker");
         }
         break;
 
+      case 'Linux':
+        $io->note('This command is not needed for Linux users.');
+        break;
+
       default:
-        $this->io()
-          ->error("Unable to determine your operating system.  Manual installation will be required.");
+        $io->error("Unable to determine your operating system.  Manual installation will be required.");
     }
   }
 
   /**
    * Routes to a machine specific http proxy function.
    */
-  public function dockerProxyCreate() {
+  public function dockerProxyCreate(SymfonyStyle $io) {
     $this->setConfig();
     switch (php_uname('s')) {
       case 'Darwin':
         $home = getenv('HOME');
         if (!file_exists("$home/.docker/machine/machines/dp-docker")) {
-          $this->io()
-            ->error('You must run `composer install` followed by `ahoy harbor` before you run this Drupal site.');
+          $io->error('You must run `composer install` followed by `ahoy harbor` before you run this Drupal site.');
         }
-        $this->setDnsProxyMac();
+        $this->setInitialConditions($io);
+        $this->setHttpProxyMac($io);
+        break;
+
+      case 'Linux':
+        $io->note('This command is not needed for Linux users.');
         break;
 
       default:
-        $this->io()
-          ->error("Unable to determine your operating system.  Manual dns boot will be required.");
+        $io->error("Unable to determine your operating system.  Manual dns boot will be required.");
     }
   }
 
@@ -75,7 +89,7 @@ class DockerCommands extends Tasks {
    *
    * Routes to a machine specific compose function.
    */
-  public function dockerCompose() {
+  public function dockerCompose(SymfonyStyle $io) {
     $this->setConfig();
     $launched = FALSE;
     switch (php_uname('s')) {
@@ -83,37 +97,27 @@ class DockerCommands extends Tasks {
         $home = getenv('HOME');
         $drupalRoot = $this->config->getDrupalRoot();
         if (!file_exists("$home/.docker/machine/machines/dp-docker") || !file_exists("$drupalRoot/core")) {
-          $this->io()
-            ->error('You must run `composer install` followed by `ahoy harbor` before you run this Drupal site.');
+          $io->error('You must run `composer install` followed by `ahoy harbor` before you run this Drupal site.');
         }
-        elseif ($this->getDockerMachineUrl()) {
+        elseif ($this->getDockerMachineUrl($io)) {
           // The docker machine is installed and running.
-          $launched = $this->setDockerComposeMac();
+          $launched = $this->setDockerComposeMac($io);
         }
         else {
           // The docker machine is installed but not running.
-          $this->io()
-            ->error('You must start the docker service using `ahoy cast-off`');
+          $io->error('You must start the docker service using `ahoy cast-off`');
         }
         break;
 
+      case 'Linux':
+        $launched = $this->setDockerComposeLinux($io);
+        break;
+
       default:
-        $this->io()
-          ->error("Unable to determine your operating system.  Manual docker startup will be required.");
+        $io->error("Unable to determine your operating system.  Manual docker startup will be required.");
     }
     if ($launched) {
-      $this->io()
-        ->text('Please stand by while the front end tools initialize.');
-      if ($this->getFrontEndStatus(TRUE)) {
-        $this->io()->text('Front end tools are ready.');
-        $this->setClearFrontEndFlags();
-      }
-      else {
-        $this->io()
-          ->caution('The wait timer expired waiting for front end tools to report readiness.');
-      }
-      $this->io()
-        ->success('The site can now be reached at ' . $this->config->get('site_shortname') . '.dpulp/');
+      $io->success('The site can now be reached at ' . $this->config->get('site_shortname') . '.test/');
     }
   }
 
@@ -124,62 +128,75 @@ class DockerCommands extends Tasks {
    *
    * @aliases boot
    */
-  public function bootDocker() {
-    $this->setConfig();
+  public function bootDocker(SymfonyStyle $io) {
+    $this->setInitialConditions($io);
     switch (php_uname('s')) {
       case 'Darwin':
         $home = getenv('HOME');
         if (!file_exists("$home/.docker/machine/machines/dp-docker") || !file_exists($this->config->getDrupalRoot() . '/core')) {
-          $this->io()
-            ->error('You must run `composer install` followed by `ahoy harbor` before you run this Drupal site.');
+          $io->error('You must run `composer install` followed by `ahoy harbor` before you run this Drupal site.');
         }
         else {
-          $this->setMacBoot();
+          $this->setMacBoot($io);
         }
         break;
 
+      case 'Linux':
+        $io->text('Linux runs Docker natively.');
+        break;
+
       default:
-        $this->io()
-          ->error("Unable to determine your operating system.  Manual boot will be required.");
+        $io->error("Unable to determine your operating system.  Manual boot will be required.");
     }
   }
 
   /**
    * Start DNS service to resolve containers.
    */
-  public function bootDns() {
-    $this->setConfig();
+  public function bootDns(SymfonyStyle $io) {
+    $this->setInitialConditions($io);
     switch (php_uname('s')) {
       case 'Darwin':
-        if ($this->setMacDnsmasq()) {
+        if ($this->setMacDnsmasq($io)) {
           /* dnsmasq running - put the mac resolver file in place. */
-          $this->setResolverFile();
-          $this->io()->success('Ballast DNS service started.');
+          $this->setResolverFile($io);
+          $io->success('Ballast DNS service started.');
           if ($this->confirm('Would you also like to launch the site created by this project?')) {
-            $this->dockerCompose();
+            $this->dockerCompose($io);
           }
           return;
         }
-        $this->io()->error('Unable to create dns container.');
+        $io->error('Unable to create dns container.');
         return;
 
       default:
-        $this->io()
-          ->error("Unable to determine your operating system.  DNS not initiated.");
+        $io->error("Unable to determine your operating system.  DNS not initiated.");
     }
   }
 
   /**
    * Prints the database connection info for use in SQL clients.
    */
-  public function connectSql() {
-    $ip = $this->getDockerMachineIp();
+  public function connectSql(SymfonyStyle $io) {
+    $this->setInitialConditions($io);
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->dockerFlags = $this->getDockerMachineConfig($io);
+        $ip = $this->getDockerMachineIp($io);
+        break;
+
+      case 'Linux':
+        $this->dockerFlags = '';
+        $ip = '127.0.0.1';
+        break;
+
+      default:
+        $io->error("Unable to determine your operating system.");
+    }
     $port = $this->getSqlPort();
-    $this->io()->title('Database Info');
-    $this->io()->text("The Docker Machine host is: $ip");
-    $this->io()->text("Connect to port: $port");
-    $this->io()->text("Username, password, and database are all 'drupal'");
-    $this->io()->note("Both the ip and port can vary between re-boots");
+    $io->title('Database Info');
+    $io->text("The database may be reached at: $ip:$port");
+    $io->text("Username, password, and database are all 'drupal'");
   }
 
   /**
@@ -196,17 +213,41 @@ class DockerCommands extends Tasks {
   }
 
   /**
-   * Mac specific docker boot process.
+   * Initialize parameters and services.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object for setInitialConditions.
    */
-  protected function setMacBoot() {
+  protected function setInitialConditions(SymfonyStyle $io) {
+    $this->setConfig();
+    $this->dockerFlags = '';
+    switch (php_uname('s')) {
+      case 'Darwin':
+        $this->dockerFlags = $this->getDockerMachineConfig($io);
+        break;
+
+      case 'Linux':
+        $this->dockerFlags = '';
+        break;
+
+      default:
+        $io->error("Unable to determine your operating system.");
+    }
+  }
+
+  /**
+   * Mac specific docker boot process.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   */
+  protected function setMacBoot(SymfonyStyle $io) {
     // Boot the Docker Machine.
-    $this->io()->title('Start the Ballast Docker Machine.');
-    if (!($ip = $this->getDockerMachineIp())) {
+    $io->title('Start the Ballast Docker Machine.');
+    if (!($ip = $this->getDockerMachineIp($io))) {
       // Set the default to the parent of the project folder.
       $dir = dirname($this->config->getProjectRoot());
-      $folder = $this->io()
-        ->ask('What is the path to your docker sites folder?',
-          $dir);
+      $folder = $io->ask('What is the path to your docker sites folder?', $dir);
       $collection = $this->collectionBuilder();
       $collection->addTask(
         $this->taskExec('docker-machine start dp-docker')
@@ -219,34 +260,37 @@ class DockerCommands extends Tasks {
       $result = $collection->run();
     }
     if ($ip || (isset($result) && $result instanceof Result && $result->wasSuccessful())) {
-      $this->io()->success('Ballast Docker Machine is ready to host projects.');
+      $io->success('Ballast Docker Machine is ready to host projects.');
     }
   }
 
   /**
    * Place or update the dns resolver file.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
    */
-  protected function setResolverFile() {
+  protected function setResolverFile(SymfonyStyle $io) {
     $this->setConfig();
     $root = $this->config->getProjectRoot();
-    if ($ip = $this->getDockerMachineIp()) {
-      if (!file_exists('/etc/resolver/dpulp') ||
-        strpos(file_get_contents('/etc/resolver/dpulp'), $ip) === FALSE
+    if ($ip = $this->getDockerMachineIp($io)) {
+      if (!file_exists('/etc/resolver/test') ||
+        strpos(file_get_contents('/etc/resolver/test'), $ip) === FALSE
       ) {
         $collection = $this->collectionBuilder();
-        if (file_exists('/etc/resolver/dpulp')) {
+        if (file_exists('/etc/resolver/test')) {
           // Clean out the file for a clean start.
           $collection->addTask(
-            $this->taskExec('sudo rm /etc/resolver/dpulp')
+            $this->taskExec('sudo rm /etc/resolver/test')
           );
         }
         $collection->addTask(
-          $this->taskExec('cp ' . "$root/setup/dns/dpulp-template $root/setup/dns/dpulp")
+          $this->taskExec('cp ' . "$root/setup/dns/test-template $root/setup/dns/test")
         )->rollback(
-          $this->taskExec('rm -f' . "$root/setup/dns/dpulp")
+          $this->taskExec('rm -f' . "$root/setup/dns/test")
         );
         $collection->addTask(
-          $this->taskReplaceInFile("$root/setup/dns/dpulp")
+          $this->taskReplaceInFile("$root/setup/dns/test")
             ->from('{docker-dp}')
             ->to($ip)
         );
@@ -257,23 +301,26 @@ class DockerCommands extends Tasks {
         }
         $collection->addTask(
           $this->taskExecStack()
-            ->exec("sudo mv $root/setup/dns/dpulp /etc/resolver")
-            ->exec('sudo chown root:wheel /etc/resolver/dpulp')
+            ->exec("sudo mv $root/setup/dns/test /etc/resolver")
+            ->exec('sudo chown root:wheel /etc/resolver/test')
         );
         $collection->run();
       }
     }
     else {
-      $this->io()->error('Unable to get an IP address for dp-docker machine.');
+      $io->error('Unable to get an IP address for dp-docker machine.');
     }
   }
 
   /**
    * Download Linux kernel: create the virtualbox based VM for Mac containers.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
    */
-  protected function setDockerMac() {
+  protected function setDockerMac(SymfonyStyle $io) {
     $this->setConfig();
-    $this->io()->title('Build the dp-docker machine');
+    $io->title('Build the dp-docker machine');
     $collection = $this->collectionBuilder();
     $collection->addTask(
       $this->taskExec('docker-machine create -d virtualbox --virtualbox-memory 2048 -virtualbox-no-share dp-docker')
@@ -282,11 +329,10 @@ class DockerCommands extends Tasks {
     );
     $result = $collection->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
-      $this->io()->success("Docker machine created.");
+      $io->success("Docker machine created.");
     }
     else {
-      $this->io()
-        ->error("Something went wrong.  Changes have been rolled back.");
+      $io->error("Something went wrong.  Changes have been rolled back.");
     }
   }
 
@@ -304,7 +350,7 @@ class DockerCommands extends Tasks {
     $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
     socket_connect($sock, $dockerIp, 53);
     if (!socket_getsockname($sock, $ip)) {
-      throw new UnexpectedValueException('Unable to get an ip via socket.');
+      throw new \UnexpectedValueException('Unable to get an ip via socket.');
     }
     socket_close($sock);
     return $ip;
@@ -313,53 +359,37 @@ class DockerCommands extends Tasks {
   /**
    * Setup the http-proxy service with dns for macOS.
    *
-   * @see https://hub.docker.com/r/jwilder/nginx-proxy/
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
    */
-  protected function setDnsProxyMac() {
-    $this->setConfig();
-    $dockerConfig = $this->getDockerMachineConfig();
-    if ($this->getDockerMachineIp()) {
-      $this->io()->title('Setup HTTP Proxy and .dp domain resolution.');
-      // Boot the DNS service.
-      $boot_task = $this->collectionBuilder();
-      $boot_task->addTask(
-        $this->taskExec("docker $dockerConfig network create proxynet")
-      )->rollback(
-        $this->taskExec("docker $dockerConfig network prune")
-      );
-      $command = "docker $dockerConfig run";
-      $command .= ' -d -v /var/run/docker.sock:/tmp/docker.sock:ro';
-      $command .= ' -p 80:80 --restart always --network proxynet';
-      $command .= ' --name http-proxy digitalpulp/nginx-proxy';
-      $boot_task->addTask(
-        $this->taskExec($command)
-      )->rollback(
-        $this->taskExec("docker $dockerConfig rm http-proxy")
-      );
+  protected function setHttpProxyMac(SymfonyStyle $io) {
+    if ($this->getDockerMachineIp($io)) {
+      $boot_task = $this->setProxyContainer($io);
       $boot_task->addTask(
         $this->taskExec('docker-machine stop dp-docker')
       );
       $result = $boot_task->run();
       if ($result instanceof Result && $result->wasSuccessful()) {
-        $this->io()->success('Proxy container is setup.');
+        $io->success('Proxy container is setup.');
       }
     }
     else {
-      $this->io()->error('Unable to get an IP address for dp-docker machine.');
+      $io->error('Unable to get an IP address for dp-docker machine.');
     }
   }
 
   /**
    * Launches the dnsmasq container if it is not running.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @return bool
+   *   Indicates success.
    */
-  protected function setMacDnsmasq() {
-    $this->setConfig();
-    $dockerConfig = $this->getDockerMachineConfig();
-    if (!isset($dockerConfig)) {
-      $this->io()->error('Unable to connect to docker machine.');
-      return;
-    }
-    $result = $this->taskExec("docker $dockerConfig inspect dnsmasq")
+  protected function setMacDnsmasq(SymfonyStyle $io) {
+    $this->setInitialConditions($io);
+    $result = $this->taskExec("docker $this->dockerFlags inspect dnsmasq")
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
       ->run();
@@ -372,13 +402,13 @@ class DockerCommands extends Tasks {
           // The container exists.
           if ($dnsmasq['State']['Running']) {
             // And the container is already running.
-            $this->io()->note('DNS service is already running.');
+            $io->note('DNS service is already running.');
             return TRUE;
           }
           // The container is stopped - remove so it is recreated to
           // renew the ip of the docker machine.
           $this->say('Container exists but is stopped.');
-          $this->taskExec("docker $dockerConfig rm dnsmasq")
+          $this->taskExec("docker $this->dockerFlags rm dnsmasq")
             ->printOutput(FALSE)
             ->printMetadata(FALSE)
             ->run();
@@ -386,12 +416,12 @@ class DockerCommands extends Tasks {
       }
     }
     // Either there is no dns container or it has been removed.
-    $ip = $this->getDockerMachineIp();
-    $command = "docker $dockerConfig run";
+    $ip = $this->getDockerMachineIp($io);
+    $command = "docker $this->dockerFlags run";
     $command .= ' -d --name dnsmasq';
     $command .= " --publish '53535:53/tcp' --publish '53535:53/udp'";
-    $command .= ' --cap-add NET_ADMIN  andyshinn/dnsmasq:2.76';
-    $command .= " --address=/dpulp/$ip";
+    $command .= ' --cap-add NET_ADMIN  andyshinn/dnsmasq:2.81';
+    $command .= " --address=/test/$ip";
     $result = $this->taskExec($command)
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
@@ -400,17 +430,136 @@ class DockerCommands extends Tasks {
   }
 
   /**
-   * Mac specific command to start docker-compose services.
+   * Helpful dns instructions for Linux.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
    */
-  protected function setDockerComposeMac() {
+  protected function setLinuxDnsInstructions(SymfonyStyle $io) {
+    $io->note([
+      'Since Docker containers run natively in Linux, while Ballast is running',
+      'all the hosted sites are served by a proxy to port 80.  For easy',
+      'resolution on our *.test subdomain, Linux users should setup a local',
+      'resolver that sends all *.test requests to the loopback address.',
+      'Further instructions with helpful urls are in the README.md file.',
+    ]);
+  }
+
+  /**
+   * Mac specific command to start docker-compose services.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @return bool
+   *   Indicates success.
+   */
+  protected function setDockerComposeMac(SymfonyStyle $io) {
     $this->setConfig();
-    if (!($ip = $this->getDockerMachineIp())) {
+    if (!($ip = $this->getDockerMachineIp($io))) {
       // The docker machine is not running.
-      $this->io()
-        ->error('You must start the docker service using `ahoy cast-off`');
-      return;
+      $io->error('You must start the docker service using `ahoy cast-off`');
+      return FALSE;
     }
-    $dockerConfig = $this->getDockerMachineConfig();
+    $result = $this->setDockerComposePlaceholders($this->getHostIp($ip));
+    return ($result instanceof Result && $result->wasSuccessful());
+  }
+
+  /**
+   * Linux specific command to start docker-compose services.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @return bool
+   *   Indicates success.
+   */
+  protected function setDockerComposeLinux(SymfonyStyle $io) {
+    $this->setConfig();
+    $ip = 'host.docker.internal';
+    $result = $this->setDockerComposePlaceholders($ip);
+    return ($result instanceof Result && $result->wasSuccessful());
+  }
+
+  /**
+   * Get the ip of the dp-docker machine.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @return mixed
+   *   The ip address or null if the machine is not running.
+   */
+  protected function getDockerMachineIp(SymfonyStyle $io) {
+    // Get the ip address of the Docker Machine.
+    $ip = NULL;
+    $result = $this->taskExec('docker-machine ip dp-docker')
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      ->printOutput(FALSE)
+      ->printMetadata(FALSE)
+      ->run();
+    $io->newLine();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $ip = $result->getMessage();
+    }
+    return trim($ip);
+  }
+
+  /**
+   * Get the url of the dp-docker machine docker daemon.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   *
+   * @return mixed
+   *   The url or null if the machine is not running.
+   */
+  public function getDockerMachineUrl(SymfonyStyle $io) {
+    // Get the url of the Docker Machine.
+    $url = '';
+    $result = $this->taskExec('docker-machine url dp-docker')
+      ->printOutput(FALSE)
+      ->printMetadata(FALSE)
+      ->run();
+    $io->newLine();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $url = $result->getMessage();
+    }
+    return trim($url);
+  }
+
+  /**
+   * Get the port exposed for sqlServer from the database service.
+   *
+   * @return mixed
+   *   The port or null if it is not running.
+   */
+  protected function getSqlPort() {
+    $this->setConfig();
+    // Get the port string.
+    $port = NULL;
+    $result = $this->taskExec("docker-compose $this->dockerFlags port database 3306")
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      ->printOutput(FALSE)
+      ->printMetadata(FALSE)
+      ->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $raw = $result->getMessage();
+      $port = trim(substr($raw, strpos($raw, ':') + 1));
+    }
+    return $port;
+  }
+
+  /**
+   * Helper method for code reuse in preparing docker-compose.yml.
+   *
+   * @param string $ip
+   *   The ip address for xdebug.
+   *
+   * @return \Robo\Result
+   *   The result of the task stack.
+   */
+  protected function setDockerComposePlaceholders($ip) {
     $root = $this->config->getProjectRoot();
     $collection = $this->collectionBuilder();
     $collection->addTask(
@@ -434,7 +583,7 @@ class DockerCommands extends Tasks {
     $collection->addTask(
       $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
         ->from('{host_ip}')
-        ->to($this->getHostIp($ip))
+        ->to($ip)
     );
     // Move into place or overwrite the docker-compose.yml.
     $collection->addTask(
@@ -443,73 +592,9 @@ class DockerCommands extends Tasks {
           "$root/docker-compose.yml", TRUE)
     );
     $collection->run();
-    $command = "docker-compose $dockerConfig up -d ";
+    $command = "docker-compose $this->dockerFlags up -d ";
     $result = $this->taskExec($command)->run();
-    return (isset($result) && $result->wasSuccessful());
-  }
-
-  /**
-   * Get the ip of the dp-docker machine.
-   *
-   * @return mixed
-   *   The ip address or null if the machine is not running.
-   */
-  protected function getDockerMachineIp() {
-    // Get the ip address of the Docker Machine.
-    $ip = NULL;
-    $result = $this->taskExec('docker-machine ip dp-docker')
-      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-      ->printOutput(FALSE)
-      ->printMetadata(FALSE)
-      ->run();
-    $this->io()->newLine();
-    if ($result instanceof Result && $result->wasSuccessful()) {
-      $ip = $result->getMessage();
-    }
-    return trim($ip);
-  }
-
-  /**
-   * Get the url of the dp-docker machine docker daemon.
-   *
-   * @return mixed
-   *   The url or null if the machine is not running.
-   */
-  public function getDockerMachineUrl() {
-    // Get the url of the Docker Machine.
-    $url = '';
-    $result = $this->taskExec('docker-machine url dp-docker')
-      ->printOutput(FALSE)
-      ->printMetadata(FALSE)
-      ->run();
-    $this->io()->newLine();
-    if ($result instanceof Result && $result->wasSuccessful()) {
-      $url = $result->getMessage();
-    }
-    return trim($url);
-  }
-
-  /**
-   * Get the port exposed for sqlServer from the database service.
-   *
-   * @return mixed
-   *   The port or null if it is not running.
-   */
-  protected function getSqlPort() {
-    $this->setConfig();
-    // Get the port string.
-    $port = NULL;
-    $dockerConfig = $this->getDockerMachineConfig();
-    $result = $this->taskExec("docker-compose $dockerConfig port database 3306")
-      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
-      ->printOutput(FALSE)
-      ->printMetadata(FALSE)
-      ->run();
-    if ($result instanceof Result && $result->wasSuccessful()) {
-      $raw = $result->getMessage();
-      $port = trim(substr($raw, strpos($raw, ':') + 1));
-    }
-    return $port;
+    return $result;
   }
 
 }

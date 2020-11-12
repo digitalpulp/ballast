@@ -21,9 +21,12 @@ may follow.
      You might need to replace `composer` with `php composer.phar`
      (or similar) for your setup._
 
-2. MacOS users also need to have [Homebrew](https://brew.sh/).
+2. Ballast will check your system for needed software.  If anything is missing, a list of missing packages will be
+provided.
 
-3. Your Docker Sites need a home.
+2. OS Specific Notes:
+
+- **macOS**: Your Docker Sites need a home.
     * Choose or create a file folder to hold all the site folders for projects
 managed with this approach.
     * If you have any existing files exported via
@@ -32,6 +35,26 @@ NFS they must not be in the chosen folder.
     NFS export.
     * The easiest way forward is
 to create a new folder such as `~/DockerSites`.
+- **Linux**: File permissions are simplest if your user belongs to the same _group_ as the webserver.
+Nginx runs as group id 82.  If this group id does not exist, you should create it and add your user to it.
+Setting any files that need to be writeable can then be set to 775 (group writeable) so they are writeable by
+Drupal. You will need to configure your system to forward all requests for `*.test` to the loop back address
+(localhost). We recommend using [dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html), which is well known
+and should be available via your package manager.  The key task is to set `address=/test/127.0.0.1` in the
+dnsmasq configuration. Here are some links to helpful blog posts for some common
+flavors of Linux:
+    * [Ubuntu](https://askubuntu.com/a/1031896)
+    * [Fedora](https://brunopaz.dev/blog/setup-a-local-dns-server-for-your-projects-on-linux-with-dnsmasq)
+    * [Arch](https://coderwall.com/p/rwpesa/set-up-wildcard-subdomains-with-dnsmasq-on-archlinux)
+
+- **Windows Linux Subsystem**: Build and manage your Ballast sites within Linux.  A Windows equivalent to dnsmasq
+appears to be [Acrylic DNS Proxy](http://mayakron.altervista.org/support/acrylic/Home.htm) as described in
+[Setting Up A Windows 10 Development Environment with WSL, PHP & Laravel](https://jackwhiting.co.uk/posts/setting-up-a-windows-10-development-environment-with-wsl-php-laravel/)
+or if the number of sites are limited, the local FQDN, `our-site.test`, could be pointed to the loopback address in your
+[hosts file](https://www.onmsft.com/how-to/how-to-modify-your-hosts-file-in-windows-10-and-why-you-might-want-to):
+```
+127.0.0.1       our-site.test
+```
 
 ## Initial Setup
 _After the initial setup, you should delete the Initial Setup section of
@@ -67,6 +90,28 @@ is shown as the last line in the snippet below:
     }
 }
 ```
+
+In addition, an additional property is available for the `drupal-scaffold` key in the `extra` property:
+```json
+{
+"file-mapping": {
+        "[web-root]/.htaccess": false,
+        "[web-root]/.eslintrc.json": false,
+        "[web-root]/.ht.router.php": false,
+        "[web-root]/INSTALL.txt": false,
+        "[web-root]/README.txt": false,
+        "[web-root]/autoload.php": false,
+        "[web-root]/example.gitignore": false,
+        "[web-root]/index.php": false,
+        "[web-root]/robots.txt": false,
+        "[web-root]/update.php": false,
+        "[web-root]/web.config": false,
+        "[web-root]/sites/default/settings.php": false
+      }
+}
+```
+These will block that file from being changed when core is updated or added to the project.
+
 ### Initial Composer Install
 
 You may wish to require an initial line up of contributed modules. (See
@@ -194,7 +239,7 @@ When installing the given `composer.json` some tasks are taken care of:
     * pre-commit by Yelp
     * Docker Machine NFS
 * A docker based http-proxy & DNS service is created such that any
-  docker container with host name ending in `.dpulp` has traffic routed
+  docker container with host name ending in `.test` has traffic routed
   from the host to the proxy.  No editing of /etc/hosts required for
   new projects.
 

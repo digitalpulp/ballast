@@ -6,15 +6,11 @@ commands:
     hide: true
   bash:
     usage: Open an interactive bash shell in a container [Advanced users only]
-    cmd: docker $(docker-machine config dp-docker) exec -it "$@" bash
+    cmd: docker exec -it "$@" bash
     hide: true
   shell:
     usage: Open an interactive bourne shell in a container [Advanced users only]
-    cmd: docker $(docker-machine config dp-docker) exec -it "$@" sh
-    hide: true
-  docker:
-    usage: docker cmd wrapper [Advanced users only]
-    cmd: docker $(docker-machine config dp-docker) "$@"
+    cmd: docker exec -it "$@" sh
     hide: true
   key-prep:
     usage: Process private key to one-liner [Advanced users only]
@@ -22,41 +18,31 @@ commands:
     hide: true
   log:
     usage: Tail a service log. Specify one of [database, php, web, front-end, cli]
-    cmd: docker-compose $(docker-machine config dp-docker) logs -f --tail=10 "$@"
-  cast-off:
-    usage: Launch the global tools needed for local development. Run this command once after you boot your computer.
-    cmd: |
-      php scripts/robo/BallastRunner.php boot && #make sure boot is successful
-      php scripts/robo/BallastRunner.php "boot:dns"
-  harbor:
-    usage: Build the harbor for your docks.  Run this command once after the first time you set up a Ballast project.
-    cmd: |
-      php scripts/robo/BallastRunner.php "docker:initialize" &&
-      php scripts/robo/BallastRunner.php "docker:proxy-create"
+    cmd: docker-compose logs -f --tail=10 "$@"
   launch:
     usage: Launch this project site.
     cmd: php scripts/robo/BallastRunner.php docker:compose
   dock:
     usage: Stops this project site and 'returns to port.'
-    cmd: docker-compose $(docker-machine config dp-docker) stop
+    cmd: docker-compose stop
   drush:
     usage: Run drush commands within the drupal site. Follow `ahoy drush` with the drush command to be run.
-    cmd: docker-compose $(docker-machine config dp-docker) exec cli drush "$@"
+    cmd: docker-compose exec cli drush "$@"
   drupal:
     usage: Run drupal console commands within the drupal site. Follow `ahoy drupal` with the drupal console command to be run.
-    cmd:  docker-compose $(docker-machine config dp-docker) exec cli drupal "$@"
+    cmd:  docker-compose exec cli drupal "$@"
   gulp:
     usage: Pass commands to gulp within the container. Follow `ahoy gulp` with the gulp command to be run.
-    cmd: docker-compose $(docker-machine config dp-docker) exec front-end node_modules/.bin/gulp "$@"
+    cmd: docker-compose exec front-end node_modules/.bin/gulp "$@"
   npm:
     usage: Pass commands to npm within the container. Follow `ahoy npm` with the npm command to be run.
-    cmd: docker-compose $(docker-machine config dp-docker) exec front-end npm "$@"
+    cmd: docker-compose exec front-end npm "$@"
   npm-update:
     usage: Install node modules and recreate the shrinkwrap.
-    cmd: docker-compose $(docker-machine config dp-docker) exec front-end npm install && docker-compose exec front-end npm shrinkwrap
+    cmd: docker-compose exec front-end npm install && docker-compose exec front-end npm shrinkwrap
   compile:
     usage: Compile the site theme assets.
-    cmd: docker-compose $(docker-machine config dp-docker) exec front-end node_modules/.bin/gulp build
+    cmd: docker-compose exec front-end node_modules/.bin/gulp build
   rebuild:
     usage: Sync with a server database and compile front end. Pass an environment argument to use with drush alias [@shortname.env]
     cmd: php scripts/robo/BallastRunner.php rebuild "$@"
