@@ -115,7 +115,7 @@ class SetupCommands extends Tasks {
     $collection->addTask(
       $this->taskFilesystemStack()
         ->copy("$drupal/sites/default/default.settings.php",
-          "$drupal/sites/default/settings.php", TRUE)
+          "$drupal/sites/default/settings.php")
     )->rollback(
       $this->taskFilesystemStack()
         ->remove("$drupal/sites/default/settings.acquia.php")
