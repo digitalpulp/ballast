@@ -19,8 +19,6 @@ use Symfony\Component\Finder\Finder;
  */
 class DeployCommands extends Tasks {
 
-  use FrontEndTrait;
-
   /**
    * Config Utility (setter injected).
    *
@@ -97,7 +95,6 @@ class DeployCommands extends Tasks {
     }
     $this->say('Deploying to tag ' . $options['tag']);
     $this->setDeploymentVersionControl($options);
-    $this->getDeploymentDependencies();
     $this->getSanitizedBuild();
     $this->setDeploymentCommit($options);
     $this->setCleanMerge($options);
@@ -124,7 +121,6 @@ class DeployCommands extends Tasks {
     $this->setDeploymentOptions($options);
     $this->say('Deploying to branch ' . $options['branch']);
     $this->setDeploymentVersionControl($options);
-    $this->getDeploymentDependencies();
     $this->getSanitizedBuild();
     $this->setDeploymentCommit($options);
     $this->setCleanMerge($options);
@@ -259,40 +255,6 @@ class DeployCommands extends Tasks {
       throw new \Exception('Unable to set git host key.');
     }
 
-  }
-
-  /**
-   * Function waits until front-end signals init is complete.
-   */
-  protected function getDeploymentDependencies() {
-    $ready = FALSE;
-    $building = FALSE;
-    $compiling = FALSE;
-    $flag_npm_install = sprintf('%s/themes/custom/%s/BUILDING.txt', $this->config->getDrupalRoot(), $this->config->get('site_theme_name'));
-    $flag_gulp_build = sprintf('%s/themes/custom/%s/COMPILING.TXT', $this->config->getDrupalRoot(), $this->config->get('site_theme_name'));
-    $this->say('Waiting for front-end tools to initialize.');
-    $iterations = 0;
-    while (!$ready) {
-      $iterations++;
-      if ($iterations > 1) {
-        // If node modules began to compile, give an update, otherwise
-        // throw an exception - something is wrong.
-        if (!$building && file_exists($flag_npm_install)) {
-          $building = TRUE;
-          $this->say('Node modules began compiling.');
-        }
-        else {
-          throw new \UnexpectedValueException('After a full round of monitoring, node modules never began to compile.');
-        }
-        if (!$compiling && file_exists($flag_gulp_build)) {
-          $compiling = TRUE;
-          $this->say('Node modules have finished compiling. Gulp is compiling the theme.');
-        }
-      }
-
-      $ready = $this->getFrontEndStatus(TRUE);
-    }
-    $this->setClearFrontEndFlags();
   }
 
   /**
