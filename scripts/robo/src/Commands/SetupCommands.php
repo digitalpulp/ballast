@@ -387,7 +387,7 @@ class SetupCommands extends Tasks {
    */
   protected function getIsInstalled(SymfonyStyle $io, $package) {
     $io->comment("Checking installation of " . $package . "...");
-    $result = $this->taskExec('which -s ' . $package)
+    $result = $this->taskExec('which ' . $package)
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
