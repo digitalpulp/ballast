@@ -56,6 +56,12 @@ or if the number of sites are limited, the local FQDN, `our-site.test`, could be
 127.0.0.1       our-site.test
 ```
 
+## Managing Theme Tasks
+There are ahoy commands for running theme tasks in the front-end container, so you can choose to not install node on
+your host. When you first setup a site with an established theme, you will probably need to run
+`ahoy npm install --no-save` to install the node based theme tools.  Additional ahoy commands for front-end task can be
+found via `ahoy --help`.
+
 ## Initial Setup
 _After the initial setup, you should delete the Initial Setup section of
 this README._
@@ -119,6 +125,9 @@ Updates and Maintenance below). If you are not adding modules at first,
 you may run `composer update nothing` to generate an initial
 `composer.lock` file.  Either way, committing the result will speed
 setup for other members of your team.
+
+### Set a node version in your custom theme.
+The front-end container expects a `.node-version` file in the theme directory. See the [nodenv documentation](https://github.com/nodenv/nodenv#nodenv-local).
 
 ### Prepare for Codeship Pro
 
