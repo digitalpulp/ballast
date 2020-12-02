@@ -257,16 +257,16 @@ When installing the given `composer.json` some tasks are taken care of:
 ### Updating Drupal Core
 
 This project will attempt to keep all of your Drupal Core files
-up-to-date; the project [drupal-composer/drupal-scaffold](https://github.com/drupal-composer/drupal-scaffold) is used
+up-to-date; the project [drupal/core-composer-scaffold](https://github.com/drupal/core-composer-scaffold) is used
 to ensure that your scaffold files are updated every time drupal/core
 is updated. If you customize any of the "scaffolding" files (commonly
 `.htaccess`), you may need to merge conflicts if any of your modified
-files are updated in a new release of Drupal core.
+files are updated in a new release of Drupal core. See the `drupal-scaffold` section above
+to block updates to any of these files.
 
 Follow the steps below to update your core files.
 
-1. Change the value of `drupal/core webflo/drupal-core-require-dev webflo/drupal-core-strict` each to the latest core version.
-2. Run `composer update drupal/core webflo/drupal-core-require-dev webflo/drupal-core-strict --with-all-dependencies` to update
+1.  Run `composer update drupal/core-recommended drupal/core-composer-scaffold drupal/core-dev --with-all-dependencies` to update
    Drupal Core and its dependencies.
 2. Run `git diff` to determine if any of the scaffolding files have
    changed. Review the files for any changes and restore any
@@ -305,6 +305,9 @@ You also can require bower components:
 ```
 composer require bower-asset/formstone
 ```
+
+The stability minimum is set to stable.  You will need to flag specific packages if you need a lower stability.
+
 ### Local Developement Commands
 The docker best practice is to work in the host and send commands to a
 container when needed.  This project uses [Ahoy](https://github.com/ahoy-cli/ahoy) as an abstraction tool to
