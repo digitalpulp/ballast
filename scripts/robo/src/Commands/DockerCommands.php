@@ -17,7 +17,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 class DockerCommands extends Tasks {
 
-  use FrontEndTrait, DockerMachineTrait, ProxyTrait;
+  use DockerMachineTrait, ProxyTrait;
 
   /**
    * Config Utility (setter injected).
