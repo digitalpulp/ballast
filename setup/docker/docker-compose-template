@@ -15,8 +15,8 @@ services:
     ports:
       - "3306"
   php:
-    # image: digitalpulp/php:7.3.24
-    image: digitalpulp/php:7.4.12
+    # image: digitalpulp/php:7.3.27
+    image: digitalpulp/php:7.4.16
     volumes:
       - .:/var/www
     working_dir: /var/www/docroot/
@@ -41,7 +41,7 @@ services:
       - internal
       - proxy
   front-end:
-    image: digitalpulp/front-end:2.0-beta.1
+    image: digitalpulp/front-end:2.0
     environment:
       THEME_NAME: {site_theme_name}
     depends_on:
@@ -52,8 +52,8 @@ services:
       - internal
     working_dir: /var/www/docroot/themes/custom/{site_theme_name}
   cli:
-  # image: digitalpulp/cli:7.3.24
-    image: digitalpulp/cli:7.4.12
+  # image: digitalpulp/cli:7.3.27
+    image: digitalpulp/cli:7.4.16
     depends_on:
       - database
       - php
