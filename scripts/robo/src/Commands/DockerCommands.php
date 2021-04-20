@@ -117,7 +117,7 @@ class DockerCommands extends Tasks {
         $io->error("Unable to determine your operating system.  Manual docker startup will be required.");
     }
     if ($launched) {
-      $io->success('The site can now be reached at ' . $this->config->get('site_shortname') . '.test/');
+      $io->success('The site can now be reached at ' . $this->config->get('site_shortname') . '.' . $this->config->get('site_tld') . '/');
     }
   }
 
@@ -273,24 +273,25 @@ class DockerCommands extends Tasks {
   protected function setResolverFile(SymfonyStyle $io) {
     $this->setConfig();
     $root = $this->config->getProjectRoot();
+    $tld = $this ->config->get('site_tld');
     if ($ip = $this->getDockerMachineIp($io)) {
-      if (!file_exists('/etc/resolver/test') ||
-        strpos(file_get_contents('/etc/resolver/test'), $ip) === FALSE
+      if (!file_exists("/etc/resolver/$tld") ||
+        strpos(file_get_contents("/etc/resolver/$tld"), $ip) === FALSE
       ) {
         $collection = $this->collectionBuilder();
-        if (file_exists('/etc/resolver/test')) {
+        if (file_exists("/etc/resolver/$tld")) {
           // Clean out the file for a clean start.
           $collection->addTask(
-            $this->taskExec('sudo rm /etc/resolver/test')
+            $this->taskExec('sudo rm /etc/resolver/' . $tld)
           );
         }
         $collection->addTask(
-          $this->taskExec('cp ' . "$root/setup/dns/test-template $root/setup/dns/test")
+          $this->taskExec('cp ' . "$root/setup/dns/$tld-template $root/setup/dns/$tld")
         )->rollback(
-          $this->taskExec('rm -f' . "$root/setup/dns/test")
+          $this->taskExec('rm -f' . "$root/setup/dns/$tld")
         );
         $collection->addTask(
-          $this->taskReplaceInFile("$root/setup/dns/test")
+          $this->taskReplaceInFile("$root/setup/dns/$tld")
             ->from('{docker-dp}')
             ->to($ip)
         );
@@ -301,8 +302,8 @@ class DockerCommands extends Tasks {
         }
         $collection->addTask(
           $this->taskExecStack()
-            ->exec("sudo mv $root/setup/dns/test /etc/resolver")
-            ->exec('sudo chown root:wheel /etc/resolver/test')
+            ->exec("sudo mv $root/setup/dns/$tld /etc/resolver")
+            ->exec("sudo chown root:wheel /etc/resolver/$tld")
         );
         $collection->run();
       }
@@ -389,6 +390,7 @@ class DockerCommands extends Tasks {
    */
   protected function setMacDnsmasq(SymfonyStyle $io) {
     $this->setInitialConditions($io);
+    $tld = $this ->config->get('site_tld');
     $result = $this->taskExec("docker $this->dockerFlags inspect dnsmasq")
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
@@ -421,7 +423,7 @@ class DockerCommands extends Tasks {
     $command .= ' -d --name dnsmasq';
     $command .= " --publish '53535:53/tcp' --publish '53535:53/udp'";
     $command .= ' --cap-add NET_ADMIN  andyshinn/dnsmasq:2.81';
-    $command .= " --address=/test/$ip";
+    $command .= " --address=/$tld/$ip";
     $result = $this->taskExec($command)
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
@@ -436,11 +438,13 @@ class DockerCommands extends Tasks {
    *   Injected IO object.
    */
   protected function setLinuxDnsInstructions(SymfonyStyle $io) {
+    $this->setConfig();
+    $tld = $this ->config->get('site_tld');
     $io->note([
       'Since Docker containers run natively in Linux, while Ballast is running',
       'all the hosted sites are served by a proxy to port 80.  For easy',
-      'resolution on our *.test subdomain, Linux users should setup a local',
-      'resolver that sends all *.test requests to the loopback address.',
+      "resolution on our *.$tld subdomain, Linux users should setup a local",
+      "resolver that sends all *.$tld requests to the loopback address.",
       'Further instructions with helpful urls are in the README.md file.',
     ]);
   }
@@ -574,6 +578,11 @@ class DockerCommands extends Tasks {
       $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
         ->from('{site_shortname}')
         ->to($this->config->get('site_shortname'))
+    );
+    $collection->addTask(
+      $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
+        ->from('{site_tld}')
+        ->to($this ->config->get('site_tld'))
     );
     $collection->addTask(
       $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")

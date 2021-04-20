@@ -1,5 +1,6 @@
 ---
 site_shortname: project
+site_tld: test
 site_theme_name: project
 site_theme_path:
 site_alias_name: project
