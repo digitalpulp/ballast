@@ -38,9 +38,9 @@ to create a new folder such as `~/DockerSites`.
 - **Linux**: File permissions are simplest if your user belongs to the same _group_ as the webserver.
 Nginx runs as group id 82.  If this group id does not exist, you should create it and add your user to it.
 Setting any files that need to be writeable can then be set to 775 (group writeable) so they are writeable by
-Drupal. You will need to configure your system to forward all requests for `*.test` to the loop back address
+Drupal. You will need to configure your system to forward all requests for `*.site_tld` to the loop back address
 (localhost). We recommend using [dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html), which is well known
-and should be available via your package manager.  The key task is to set `address=/test/127.0.0.1` in the
+and should be available via your package manager.  The key task is to set `address=/site_tld/127.0.0.1` in the
 dnsmasq configuration. Here are some links to helpful blog posts for some common
 flavors of Linux:
     * [Ubuntu](https://askubuntu.com/a/1031896)
@@ -50,10 +50,10 @@ flavors of Linux:
 - **Windows Linux Subsystem**: Build and manage your Ballast sites within Linux.  A Windows equivalent to dnsmasq
 appears to be [Acrylic DNS Proxy](http://mayakron.altervista.org/support/acrylic/Home.htm) as described in
 [Setting Up A Windows 10 Development Environment with WSL, PHP & Laravel](https://jackwhiting.co.uk/posts/setting-up-a-windows-10-development-environment-with-wsl-php-laravel/)
-or if the number of sites are limited, the local FQDN, `our-site.test`, could be pointed to the loopback address in your
+or if the number of sites are limited, the local FQDN, `our-site.site_tld`, could be pointed to the loopback address in your
 [hosts file](https://www.onmsft.com/how-to/how-to-modify-your-hosts-file-in-windows-10-and-why-you-might-want-to):
 ```
-127.0.0.1       our-site.test
+127.0.0.1       our-site.site_tld
 ```
 
 ## Managing Theme Tasks
@@ -73,6 +73,8 @@ There are some project specific values that should be set in this file. The
 default location for custom themes is `docroot/themes/custom`. This can be
 altered by adding a `site_theme_path` key to this file and setting it to the
 relative path from the project root to parent directory for custom themes.
+The local top level domain can be changed from `test` by changing the value of
+`site_tld`, which is why this documentation uses `site_tld` for the local tld.
 
 ### Edit `composer.json`
 There is also a project specific value to set here, which is the path to
@@ -248,7 +250,7 @@ When installing the given `composer.json` some tasks are taken care of:
     * pre-commit by Yelp
     * Docker Machine NFS
 * A docker based http-proxy & DNS service is created such that any
-  docker container with host name ending in `.test` has traffic routed
+  docker container with host name ending in `.site_tld` has traffic routed
   from the host to the proxy.  No editing of /etc/hosts required for
   new projects.
 
