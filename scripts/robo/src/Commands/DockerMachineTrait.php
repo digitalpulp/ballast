@@ -49,7 +49,7 @@ trait DockerMachineTrait {
       }
       else {
         $io->error('Unable to connect to docker machine.');
-        throw new TaskExitException('Unable to connect to docker machine.');
+        throw new TaskExitException($this, 'Unable to connect to docker machine.', 1);
       }
     }
     return $this->dockerConfig;

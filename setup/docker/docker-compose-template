@@ -34,9 +34,9 @@ services:
       - .:/var/www
     working_dir: /var/www/docroot/
     environment:
-      VIRTUAL_HOST: {site_shortname}.{site_tld)
+      VIRTUAL_HOST: {site_shortname}.{site_tld}
       DOCROOT: /var/www/docroot
-      SERVER_NAME: {site_shortname}.{site_tld)
+      SERVER_NAME: {site_shortname}.{site_tld}
     networks:
       - internal
       - proxy
