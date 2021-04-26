@@ -129,7 +129,7 @@ class DockerCommands extends Tasks {
    * @aliases boot
    */
   public function bootDocker(SymfonyStyle $io) {
-    $this->setInitialConditions($io);
+    $this->setConfig();
     switch (php_uname('s')) {
       case 'Darwin':
         $home = getenv('HOME');
@@ -273,7 +273,7 @@ class DockerCommands extends Tasks {
   protected function setResolverFile(SymfonyStyle $io) {
     $this->setConfig();
     $root = $this->config->getProjectRoot();
-    $tld = $this ->config->get('site_tld');
+    $tld = $this->config->get('site_tld');
     if ($ip = $this->getDockerMachineIp($io)) {
       if (!file_exists("/etc/resolver/$tld") ||
         strpos(file_get_contents("/etc/resolver/$tld"), $ip) === FALSE
@@ -390,7 +390,7 @@ class DockerCommands extends Tasks {
    */
   protected function setMacDnsmasq(SymfonyStyle $io) {
     $this->setInitialConditions($io);
-    $tld = $this ->config->get('site_tld');
+    $tld = $this->config->get('site_tld');
     $result = $this->taskExec("docker $this->dockerFlags inspect dnsmasq")
       ->printOutput(FALSE)
       ->printMetadata(FALSE)
@@ -439,7 +439,7 @@ class DockerCommands extends Tasks {
    */
   protected function setLinuxDnsInstructions(SymfonyStyle $io) {
     $this->setConfig();
-    $tld = $this ->config->get('site_tld');
+    $tld = $this->config->get('site_tld');
     $io->note([
       'Since Docker containers run natively in Linux, while Ballast is running',
       'all the hosted sites are served by a proxy to port 80.  For easy',
@@ -459,7 +459,7 @@ class DockerCommands extends Tasks {
    *   Indicates success.
    */
   protected function setDockerComposeMac(SymfonyStyle $io) {
-    $this->setConfig();
+    $this->setInitialConditions($io);
     if (!($ip = $this->getDockerMachineIp($io))) {
       // The docker machine is not running.
       $io->error('You must start the docker service using `ahoy cast-off`');
@@ -582,7 +582,7 @@ class DockerCommands extends Tasks {
     $collection->addTask(
       $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")
         ->from('{site_tld}')
-        ->to($this ->config->get('site_tld'))
+        ->to($this->config->get('site_tld'))
     );
     $collection->addTask(
       $this->taskReplaceInFile("$root/setup/docker/docker-compose.yml")

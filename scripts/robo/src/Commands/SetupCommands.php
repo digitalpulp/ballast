@@ -163,11 +163,14 @@ class SetupCommands extends Tasks {
         ->to($this->config->get('site_proxy_origin_url'))
     );
     if (file_exists("$drupal/sites/default/settings.php") &&
-      !preg_match(
+      preg_match(
         '|/\*\sSettings added by robo setup:drupal|',
         file_get_contents("$drupal/sites/default/settings.php")
       )
     ) {
+      $io->text('Robo settings previously appended to existing settings.php');
+    }
+    else {
       $collection->addTask(
         $this->taskConcat(
           [
@@ -257,7 +260,7 @@ class SetupCommands extends Tasks {
       $io->listing($commands);
     }
     else {
-      $this->io->success("Your Mac has the required software to use Ballast.");
+      $io->success("Your Mac has the required software to use Ballast.");
       $ready = TRUE;
     }
     return $ready;
