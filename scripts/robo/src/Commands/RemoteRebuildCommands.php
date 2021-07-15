@@ -17,22 +17,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 class RemoteRebuildCommands extends Tasks {
 
-  use DockerMachineTrait;
-
   /**
    * Config Utility (singleton).
    *
    * @var \Ballast\Utilities\Config
    */
   protected $config;
-
-
-  /**
-   * Contains docker config flags.
-   *
-   * @var string
-   */
-  protected $dockerFlags;
 
   /**
    * Rebuilds the local site from a remote server.
@@ -51,7 +41,6 @@ class RemoteRebuildCommands extends Tasks {
     'no-update' => FALSE,
     'no-compile' => FALSE,
   ]) {
-    $this->setInitialConditions($io);
     $target = $this->config->get('site_alias_name') . '.' . $environment;
     if ($this->getRemoteDump($io, $target)) {
       $io->text('Remote database dumped.');
@@ -77,7 +66,6 @@ class RemoteRebuildCommands extends Tasks {
    *   The environment suffix for the drush alias.
    */
   public function rebuildPantheon(SymfonyStyle $io, $environment = 'dev') {
-    $this->setInitialConditions($io);
     $target = $this->config->get('site_alias_name') . '.' . $environment;
     if ($this->getRemotePantheonDump($io, $target)) {
       $io->text('Remote database dumped.');
@@ -89,29 +77,6 @@ class RemoteRebuildCommands extends Tasks {
     }
     else {
       $io->error('The db dump from the remote system failed to complete');
-    }
-  }
-
-  /**
-   * Initialize parameters and services.
-   *
-   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
-   *   Injected IO object for setInitialConditions.
-   */
-  protected function setInitialConditions(SymfonyStyle $io) {
-    $this->setConfig();
-    $this->dockerFlags = '';
-    switch (php_uname('s')) {
-      case 'Darwin':
-        $this->dockerFlags = $this->getDockerMachineConfig($io);
-        break;
-
-      case 'Linux':
-        $this->dockerFlags = '';
-        break;
-
-      default:
-        $io->error("Unable to determine your operating system.");
     }
   }
 
@@ -202,17 +167,17 @@ class RemoteRebuildCommands extends Tasks {
     $io->text('Loading remote dump to local database.');
     $loadRemote = $this->collectionBuilder();
     $loadRemote->addTask(
-      $this->taskExec("docker-compose $this->dockerFlags exec -T cli drush -y sql-drop || true")
+      $this->taskExec("ddev drush -y sql-drop || true")
         ->printMetadata(FALSE)
         ->printOutput(FALSE)
     );
     $loadRemote->addTask(
-      $this->taskExec("docker-compose $this->dockerFlags exec -T cli drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
+      $this->taskExec("ddev drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
         ->printMetadata(FALSE)
         ->printOutput(FALSE)
     );
     $loadRemote->addTask(
-      $this->taskExec("docker-compose $this->dockerFlags exec -T cli drush sqlsan -y --sanitize-password=dp --sanitize-email=user-%uid@example.com")
+      $this->taskExec("ddev drush sqlsan -y --sanitize-password=dp --sanitize-email=user-%uid@example.com")
         ->printMetadata(FALSE)
         ->printOutput(FALSE)
     );
@@ -238,24 +203,24 @@ class RemoteRebuildCommands extends Tasks {
   protected function getUpdate(SymfonyStyle $io) {
     $io->newLine();
     $io->text('Running database updates and importing config.');
-    $updateResult = $this->taskExec("docker-compose $this->dockerFlags exec cli drush -y updb")
+    $updateResult = $this->taskExec("ddev drush -y updb")
       ->printMetadata(FALSE)
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_NORMAL)
       ->run();
     $io->newLine();
     $io->text('Rebuilding cache before importing config to enable any overrides.');
-    $this->taskExec("docker-compose $this->dockerFlags exec -T cli drush -y cr")
+    $this->taskExec("ddev drush -y cr")
       ->printMetadata(FALSE)
       ->printOutput(FALSE)
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
-    $updateResult->merge($this->taskExec("docker-compose $this->dockerFlags exec cli drush -y cim")
+    $updateResult->merge($this->taskExec("ddev drush -y cim")
       ->printMetadata(FALSE)
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_NORMAL)
       ->run());
     $io->newLine();
     $io->text('Rebuilding cache after importing config.');
-    $this->taskExec("docker-compose $this->dockerFlags exec -T cli drush -y cr")
+    $this->taskExec("ddev drush -y cr")
       ->printMetadata(FALSE)
       ->printOutput(FALSE)
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
@@ -276,7 +241,7 @@ class RemoteRebuildCommands extends Tasks {
   protected function getRebuiltTheme(SymfonyStyle $io) {
     $io->newLine();
     $io->text('Building the theme.');
-    $gulpResult = $this->taskExec("docker-compose $this->dockerFlags exec -T front-end node_modules/.bin/gulp build")
+    $gulpResult = $this->taskExec("dev exec -s front-end node_modules/.bin/gulp build")
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
     if ($gulpResult instanceof Result && $gulpResult->wasSuccessful()) {

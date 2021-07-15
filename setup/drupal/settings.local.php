@@ -3,18 +3,6 @@
  * @file
  * This file is generated composer install and is excluded in .gitignore
  */
-$databases['default']['default'] = array(
-  'database' => 'drupal',
-  'username' => 'drupal',
-  'password' => 'drupal',
-  'prefix' => '',
-  'host' => 'database',
-  'port' => '3306',
-  'namespace' => 'Drupal\\Core\\Database\\Driver\\mysql',
-  'driver' => 'mysql',
-);
-
-
 
 /**
  * Show all error messages, with backtrace information.
@@ -85,7 +73,6 @@ $settings['rebuild_access'] = TRUE;
 $settings['skip_permissions_hardening'] = TRUE;
 
 $settings['file_private_path'] = '/var/www/files-private';
-$settings['trusted_host_patterns'][] =   '^{site_shortname}.test$';
 
 /* Config for working with or testing various splits */
 
@@ -98,7 +85,8 @@ $config['stage_file_proxy.settings']['origin'] = '{site_proxy_origin_url}';
 $config['stage_file_proxy.settings']['use_imagecache_root'] = TRUE;
 $config['stage_file_proxy.settings']['verify'] = TRUE;
 
-$dir = '/var/www';
+// Get the path to the parent of docroot.
+$dir = dirname(DRUPAL_ROOT);
 $settings['config_sync_directory'] = $dir . '/config';
 
 /* Load development services */

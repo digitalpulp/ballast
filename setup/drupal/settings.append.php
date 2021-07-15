@@ -17,12 +17,12 @@ if (isset($_ENV['AH_SITE_ENVIRONMENT'])) {
   // Load shared Acquia settings.
   require __DIR__ . '/settings.acquia.php';
 }
-// Load settings suitable outside of Acquia (e.g. local development).
+// Load settings for local development.
 else {
   // Load share non-Acquia settings if it exists.
-  $non_acquia_conf_file_path = __DIR__ . '/settings.non-acquia.php';
-  if (file_exists($non_acquia_conf_file_path)) {
-    require $non_acquia_conf_file_path;
+  $ddev_file_path = __DIR__ . '/settings.ddev.php';
+  if (file_exists($ddev_file_path)) {
+    require $ddev_file_path;
   }
 
   // Load local settings file if it exists.

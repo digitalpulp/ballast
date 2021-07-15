@@ -1,0 +1,60 @@
+{
+  "name": "A WordPress Project",
+  "description": "A local development toolset for automating Docker setup and WordPress development.",
+  "repositories": [
+    {
+      "type": "composer",
+      "url":"https://wpackagist.org",
+      "only": [
+        "wpackagist-plugin/*",
+        "wpackagist-theme/*"
+      ]
+    },
+    {
+      "type": "package",
+      "package": {
+        "name": "wordpress/wordpress",
+        "type": "webroot",
+        "version": "5.7.2",
+        "dist": {
+          "type": "zip",
+          "url": "https://wordpress.org/wordpress-5.7.2.zip"
+        },
+        "require": {
+          "fancyguy/webroot-installer": "^1.0"
+        }
+      }
+    },
+    {
+      "type": "composer",
+      "url": "https://asset-packagist.org"
+    }
+  ],
+  "require": {
+    "consolidation/robo": "^2.0",
+    "wordpress/wordpress": "^5.7"
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true
+  },
+  "autoload": {
+    "psr-4": {
+      "Ballast\\": "scripts/robo/src"
+    }
+  },
+  "scripts": {
+    "robo": "@php scripts/robo/BallastRunner.php --ansi",
+    "post-install-cmd": [
+      "composer robo setup:instructions"
+    ],
+    "post-update-cmd": [
+      "composer robo setup:instructions"
+    ]
+  },
+  "extra": {
+    "webroot-dir": "docroot",
+    "webroot-package": "wordpress/wordpress"
+  }
+}

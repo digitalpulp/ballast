@@ -5,14 +5,14 @@ Key contributors:
   - [Shawn Duncan](https://github.com/FatherShawn)
   - [Nick Maine](https://github.com/nickmaine)
 
-## A Composer template for Drupal projects with Docker
+## A Composer template for Drupal and WordPress projects with Docker
 
-This project template automates [Docker](https://www.docker.com/) based local development with [Drupal Composer](https://github.com/drupal-composer/drupal-project) workflows. The local development automation is
-currently only optimized for macOS but Linux. Windows uses should take advantage of Windows Linux Subsystem.
+This project template automates [Docker](https://www.docker.com/) based local development with using
+[DDEV](https://github.com/drud/ddev) as a foundation.
 
-- Site dependencies are managed with [Composer](https://getcomposer.org/) and initial Composer plugins are compatible
+- Site dependencies managed with [Composer](https://getcomposer.org/) and initial Composer plugins are compatible
   with Composer 2.
-- Setup and management of Docker is automated.
+- Automated setup of DDEV.
 
 ## Getting Started
 
@@ -24,37 +24,17 @@ currently only optimized for macOS but Linux. Windows uses should take advantage
 2. Ballast will check your system for needed software.  If anything is missing, a list of missing packages will be
 provided.
 
+3. We recommend that you place all your Ballast projects in a single parent directory, such as `~/BallastSites/`.
+
 2. OS Specific Notes:
 
-- **macOS**: Your Docker Sites need a home.
-    * Choose or create a file folder to hold all the site folders for projects
-managed with this approach.
-    * If you have any existing files exported via
-NFS they must not be in the chosen folder.
-    * You must also not choose a folder that is a child of an existing
-    NFS export.
-    * The easiest way forward is
-to create a new folder such as `~/DockerSites`.
-- **Linux**: File permissions are simplest if your user belongs to the same _group_ as the webserver.
-Nginx runs as group id 82.  If this group id does not exist, you should create it and add your user to it.
-Setting any files that need to be writeable can then be set to 775 (group writeable) so they are writeable by
-Drupal. You will need to configure your system to forward all requests for `*.site_tld` to the loop back address
-(localhost). We recommend using [dnsmasq](http://www.thekelleys.org.uk/dnsmasq/doc.html), which is well known
-and should be available via your package manager.  The key task is to set `address=/site_tld/127.0.0.1` in the
-dnsmasq configuration. Here are some links to helpful blog posts for some common
-flavors of Linux:
-    * [Ubuntu](https://askubuntu.com/a/1031896)
-    * [Fedora](https://brunopaz.dev/blog/setup-a-local-dns-server-for-your-projects-on-linux-with-dnsmasq)
-    * [Arch](https://coderwall.com/p/rwpesa/set-up-wildcard-subdomains-with-dnsmasq-on-archlinux)
-
-- **Windows Linux Subsystem**: Build and manage your Ballast sites within Linux.  A Windows equivalent to dnsmasq
-appears to be [Acrylic DNS Proxy](http://mayakron.altervista.org/support/acrylic/Home.htm) as described in
-[Setting Up A Windows 10 Development Environment with WSL, PHP & Laravel](https://jackwhiting.co.uk/posts/setting-up-a-windows-10-development-environment-with-wsl-php-laravel/)
-or if the number of sites are limited, the local FQDN, `our-site.site_tld`, could be pointed to the loopback address in your
-[hosts file](https://www.onmsft.com/how-to/how-to-modify-your-hosts-file-in-windows-10-and-why-you-might-want-to):
-```
-127.0.0.1       our-site.site_tld
-```
+- **macOS**: Your Docker Sites need a home. DDEV uses *Docker for Mac* which manages file exports to Docker. This is
+  well known to have performance issues on macOS.  Once you have confirmed that the project loads properly then we
+  recommend that you transition to use [NFS](https://ddev.readthedocs.io/en/stable/users/performance/#using-nfs-to-mount-the-project-into-the-web-container)
+  for the mounted filesystem.  We have extracted and automated the setup described in the DDEV docs: `ahoy setup-nfs`
+- **Windows Linux Subsystem**: Build and manage your Ballast sites within Linux.  DDev [recommends this approach](https://ddev.readthedocs.io/en/stable/#installation-or-upgrade-windows-wsl2) for
+Windows users.
+- **Native Linux**: Follow one of the [installation methods](https://ddev.readthedocs.io/en/stable/#installationupgrade-script-linux-and-macos-armarm64-and-amd64-architectures) for DDev.
 
 ## Managing Theme Tasks
 There are ahoy commands for running theme tasks in the front-end container, so you can choose to not install node on
@@ -67,14 +47,6 @@ _After the initial setup, you should delete the Initial Setup section of
 this README._
 
 In the folder chosen or created under _Getting Started_, `composer create-project digitalpulp/ballast  your_project`.
-
-### Edit `setup/config.yml`
-There are some project specific values that should be set in this file. The
-default location for custom themes is `docroot/themes/custom`. This can be
-altered by adding a `site_theme_path` key to this file and setting it to the
-relative path from the project root to parent directory for custom themes.
-The local top level domain can be changed from `test` by changing the value of
-`site_tld`, which is why this documentation uses `site_tld` for the local tld.
 
 ### Edit `composer.json`
 There is also a project specific value to set here, which is the path to
@@ -98,6 +70,7 @@ is shown as the last line in the snippet below:
     }
 }
 ```
+This can be changed to `npm-asset` if that fits your project better.
 
 In addition, an additional property is available for the `drupal-scaffold` key in the `extra` property:
 ```json
@@ -120,13 +93,20 @@ In addition, an additional property is available for the `drupal-scaffold` key i
 ```
 These will block that file from being changed when core is updated or added to the project.
 
+### WordPress
+Replace the original composer.json file with the `wordpress-composer.json` and running `composer update`.
+
 ### Initial Composer Install
 
-You may wish to require an initial line up of contributed modules. (See
+You may wish to require an initial line up of contributed modules or WordPress plugins. (See
 Updates and Maintenance below). If you are not adding modules at first,
 you may run `composer update nothing` to generate an initial
 `composer.lock` file.  Either way, committing the result will speed
 setup for other members of your team.
+
+
+### Run `composer robo setup:cloned`
+An interview and automated setup will run and configure much of the project for you.
 
 ### Set a node version in your custom theme.
 The front-end container expects a `.node-version` file in the theme directory. See the [nodenv documentation](https://github.com/nodenv/nodenv#nodenv-local).
@@ -178,12 +158,7 @@ Deployment credentials should not be stored in the repo in the clear, but Codesh
 12. Remove or move the key created in step 6 - **do not commit** the private key!
 13. Commit `env.encrypted` to the repo.
 
-### Advanced `ahoy` commands for Tech Leads
-There are some additional commands in the `ahoy.yml` file marked "Advanced" which do
-not appear in response to `ahoy --help`  These are intended for tech leads that may need
-to shell in the docker container for some purpose.
-
-### Using a Passphrase protected key in the CI Service
+#### Using a Passphrase protected key in the CI Service
 
 Some projects, such as ecommerce projects, should have all ssh keys
 protected with a passphrase.  This is not particularly an issue for keys
@@ -193,7 +168,7 @@ environment is using our containers and is therefore created for each
 build. This example expects the CI service to be Codeship, which you
 can adapt if you use a different service.
 
-#### Additional Environment Variables
+##### Additional Environment Variables
 1. Add the passphrase into the `env` file described above as
    `SSHPASS=key` and re-encrypt the file.
 1. Add an environment variable to `environment` section of the `deploy`
@@ -202,13 +177,18 @@ can adapt if you use a different service.
 GIT_SSH_COMMAND: SSH_AUTH_SOCK=/root/.ssh/ssh_auth_sock ssh
 ```
 
-#### Manually Connect Once
+##### Manually Connect Once
 If the key in question has never been used to authenticate to the remote
 git service, ssh-agent will still prompt for the passphrase as discussed
 in this [StackExchange comment](https://superuser.com/a/1309412/206941).
 Use `ssh -i` to connect once to the git service from the command line on
 your local using the CI key.  Supply the passphrase at the prompt and
 the git service will be primed for use by your CI user.
+
+### Advanced `ahoy` commands for Tech Leads
+There are some additional commands in the `ahoy.yml` file marked "Advanced" which do
+not appear in response to `ahoy --help`  These are intended for tech leads that may need
+to shell in the docker container for some purpose.
 
 ## Install the Project
 ```
@@ -284,6 +264,13 @@ Follow the steps below to update your core files.
    keeping all of your modifications at the beginning or end of the file
    is a good strategy to keep merges easy.
 
+### Updating WordPress
+
+Edit the version number and url in the package definition embedded in the
+composer.json.  See:
+- [WPackagist](https://wpackagist.org/)
+- [Webroot Installer](https://github.com/fancyguy/webroot-installer)
+
 ### Updating and maintaining `composer.json`
 
 At the _Managing Drupal Projects with Composer_ BOF at DrupalCon
@@ -316,36 +303,7 @@ container when needed.  This project uses [Ahoy](https://github.com/ahoy-cli/aho
 further simplify this flow for developers. Ahoy commands work anywhere
 at or below the root directory of the project.
 
-- `ahoy harbor` -  Build the harbor for your docks.  Run this command
-  _once_ after the _first time_ you `composer install` a dp-docker project.
-- `ahoy cast-off` - Launch the global tools needed for local
-  development. Run this command once after you boot your computer.
-- `ahoy launch` - Launch this project site.
-- `ahoy dock` - Stops this project site and 'returns to port.'
-- `ahoy drush command` - Executes _command_ via drush in the site.
-- `ahoy drupal command` - Executes _command_ via drupal console
-  in the site.
-- `ahoy gulp command` - Executes _command_ via gulp in the site theme
-  folder.
-- `ahoy npm command` - Executes _command_ via npm in the site theme
-  folder.
-- `ahoy npm-update` - Runs 'npm install' and 'npm-shrinkwrap' in the
-  site theme folder.
-- `ahoy compile` - Compile the site theme assets.
-- `ahoy rebuild env` - Sync with a server database and compile front
-  end. Pass an environment argument to use with the drush alias
-  (@shortname.env)
-
-
-
-### Generate `composer.json` from existing project
-
-With using [the "Composer Generate" drush extension](https://www.drupal.org/project/composer_generate)
-you can now generate a basic `composer.json` file from an existing
-project. Note that the generated `composer.json` will differ from this
-project's file. We recommend comparing the resulting output with this
-project's and editing the composer.json to merge them by hand.
-
+`ahoy -h` will list all Ahoy commands.
 
 ## FAQ
 

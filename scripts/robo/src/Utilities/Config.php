@@ -12,8 +12,10 @@ use DrupalFinder\DrupalFinder;
  */
 class Config {
 
+  const PATH = '/scripts/robo/config.yml';
+
   /**
-   * Array of config values loaded from /setup/config.yml.
+   * Array of config values loaded from self::PATH.
    *
    * @var array
    */
@@ -82,7 +84,7 @@ class Config {
     if (empty($this->configuration)) {
       $this->setRoots();
       try {
-        $this->configuration = Yaml::parse(file_get_contents("$this->projectRoot/setup/config.yml"));
+        $this->configuration = Yaml::parse(file_get_contents($this->projectRoot . self::PATH));
       }
       catch (ParseException $e) {
         $this->io()
