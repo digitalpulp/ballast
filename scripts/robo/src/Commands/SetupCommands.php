@@ -265,6 +265,9 @@ class SetupCommands extends Tasks {
     $ready = FALSE;
     $this->setConfig();
     $io->title('Mac Setup for Ballast');
+    if ($this->getIsInstalled($io, 'docker-machine')) {
+      $io->note('Your system has docker-machine installed.  If you are upgrading from Ballast 2.x or below this check may falsely report readiness. Ballast 3.x uses Docker Desktop which you can install along side docker-machine and run with docker-machine stopped.');
+    }
     $required = $this->getRequirements($io, 'mac');
     if (count($required) > 0) {
       $io->warning('Your Mac is missing required software to use Ballast');
