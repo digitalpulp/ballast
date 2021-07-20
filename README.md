@@ -36,6 +36,12 @@ provided.
 Windows users.
 - **Native Linux**: Follow one of the [installation methods](https://ddev.readthedocs.io/en/stable/#installationupgrade-script-linux-and-macos-armarm64-and-amd64-architectures) for DDev.
 
+## Upgrading to 3.x
+
+You will see an http-proxy container running in Docker Desktop.  This container will create a conflict with ddev.
+If you are only testing 3.x then simply stop this container.  If you are changing to 3.x completely, you can delete
+this container.  If you have to run 2.x after deleting, the 2.x version of `ahoy harbor` will restore it.
+
 ## Managing Theme Tasks
 There are ahoy commands for running theme tasks in the front-end container, so you can choose to not install node on
 your host. When you first setup a site with an established theme, you will probably need to run
