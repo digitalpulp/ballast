@@ -4,17 +4,9 @@ commands:
     usage: Call our robo commands [Advanced users only]
     cmd: php scripts/robo/BallastRunner.php "$@"
     hide: true
-  bash:
-    usage: Open an interactive bash shell in a container [Advanced users only]
-    cmd: docker $(docker-machine config dp-docker) exec -it "$@" bash
-    hide: true
   shell:
-    usage: Open an interactive bourne shell in a container [Advanced users only]
-    cmd: docker $(docker-machine config dp-docker) exec -it "$@" sh
-    hide: true
-  docker:
-    usage: docker cmd wrapper [Advanced users only]
-    cmd: docker $(docker-machine config dp-docker) "$@"
+    usage: Pass a service id to open an interactive shell in a service [Advanced users only]
+    cmd: ddev ssh -d /var/www/html -s "$@"
     hide: true
   key-prep:
     usage: Process private key to one-liner [Advanced users only]
@@ -22,44 +14,40 @@ commands:
     hide: true
   log:
     usage: Tail a service log. Specify one of [database, php, web, front-end, cli]
-    cmd: docker-compose $(docker-machine config dp-docker) logs -f --tail=10 "$@"
-  cast-off:
-    usage: Launch the global tools needed for local development. Run this command once after you boot your computer.
-    cmd: |
-      php scripts/robo/BallastRunner.php boot && #make sure boot is successful
-      php scripts/robo/BallastRunner.php "boot:dns"
+    cmd: ddev logs -f --tail 10 -s "$@"
   harbor:
-    usage: Build the harbor for your docks.  Run this command once after the first time you set up a Ballast project.
-    cmd: |
-      php scripts/robo/BallastRunner.php "docker:initialize" &&
-      php scripts/robo/BallastRunner.php "docker:proxy-create"
+    usage: Build the harbor for your docks.  Run this command once to set up a Ballast project.
+    cmd: php scripts/robo/BallastRunner.php setup:project
   launch:
     usage: Launch this project site.
-    cmd: php scripts/robo/BallastRunner.php docker:compose
+    cmd: ddev start
   dock:
     usage: Stops this project site and 'returns to port.'
-    cmd: docker-compose $(docker-machine config dp-docker) stop
+    cmd: ddev stop
+  drop-anchor:
+    usage: Stops all Ballast projects.
+    cmd: ddev poweroff
   drush:
     usage: Run drush commands within the drupal site. Follow `ahoy drush` with the drush command to be run.
-    cmd: docker-compose $(docker-machine config dp-docker) exec cli drush "$@"
-  drupal:
-    usage: Run drupal console commands within the drupal site. Follow `ahoy drupal` with the drupal console command to be run.
-    cmd:  docker-compose $(docker-machine config dp-docker) exec cli drupal "$@"
+    cmd: ddev drush "$@"
   gulp:
     usage: Pass commands to gulp within the container. Follow `ahoy gulp` with the gulp command to be run.
-    cmd: docker-compose $(docker-machine config dp-docker) exec front-end node_modules/.bin/gulp "$@"
+    cmd: ddev exec -s front-end node_modules/.bin/gulp "$@"
   npm:
     usage: Pass commands to npm within the container. Follow `ahoy npm` with the npm command to be run.
-    cmd: docker-compose $(docker-machine config dp-docker) exec front-end npm "$@"
+    cmd: ddev exec -s front-end npm "$@"
   npm-update:
     usage: Install node modules and recreate the shrinkwrap.
-    cmd: docker-compose $(docker-machine config dp-docker) exec front-end npm install && docker-compose exec front-end npm shrinkwrap
+    cmd: ddev exec -s exec front-end npm install && docker-compose exec front-end npm shrinkwrap
   compile:
     usage: Compile the site theme assets.
-    cmd: docker-compose $(docker-machine config dp-docker) exec front-end node_modules/.bin/gulp build
+    cmd: ddev exec -s exec front-end node_modules/.bin/gulp build
   rebuild:
     usage: Sync with a server database and compile front end. Pass an environment argument to use with drush alias [@shortname.env]
     cmd: php scripts/robo/BallastRunner.php rebuild "$@"
   sql:
     usage: Displays connection info for the database service.
     cmd: php scripts/robo/BallastRunner.php connect:sql
+  setup-nfs:
+    usage: Prepares your Mac for DDev to use NFS on all projects
+    cmd: php scripts/robo/BallastRunner.php setup:nfs

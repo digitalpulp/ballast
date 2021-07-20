@@ -2,11 +2,13 @@
 
 namespace Ballast\Commands;
 
+use Robo\Collection\Collection;
 use Robo\Tasks;
 use Robo\Result;
 use Robo\Contract\VerbosityThresholdInterface;
 use Ballast\Utilities\Config;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Robo commands that manage setup.
@@ -16,8 +18,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * @package Ballast\Commands
  */
 class SetupCommands extends Tasks {
-
-  use ProxyTrait;
 
   /**
    * Config Utility (singleton).
@@ -31,19 +31,20 @@ class SetupCommands extends Tasks {
    */
   public function setupInstructions(SymfonyStyle $io) {
     $io->title('Getting Started');
-    $io->text('If you wish to use Ballast as your local dev setup, run the following commands:');
+    $io->text('If you wish to use Ballast as your local dev setup, run:');
     $io->listing([
-      'composer robo setup:drupal',
       'composer robo setup:prerequisites',
     ]);
-    $io->newLine();
-    $io->text('If you have previously installed Ballast on this machine you are now ready to cast-off and launch.');
-    $io->text('To launch this Drupal site, use the following commands:');
+    $io->text('If you are part of a team, and this project has been intialized by your lead, run:');
     $io->listing([
-      'ahoy cast-off',
-      'or: ahoy launch  (if you have already called `ahoy cast-off` in another project.)',
-      'ahoy rebuild (if you have Drush aliases ready in `drush/sites`)',
+      'composer robo setup:project',
+      'ahoy launch',
     ]);
+    $io->newLine();
+    $io->text('Ballast wraps utilities and automation around the excellent ddev-local toolset.');
+    $io->text('If you choose not to use `ahoy` you can use ddev directly. See the README.md');
+    $io->text('If you are running on macOS see the README.md about performance improvements.');
+    $io->text('To launch this site, use `ahoy launch`.  The full list is available by using `ahoy --help`.');
   }
 
   /**
@@ -57,137 +58,158 @@ class SetupCommands extends Tasks {
         if (!$this->getMacReadiness($io)) {
           return;
         }
-        $this->setPrecommitHooks($io);
-        $this->setAhoyCommands($io, 'mac');
-        $io->note('All the docker projects need to be in the same parent folder.  Because of the nature of NFS, this folder cannot contain any older vagrant based projects. If needed, create a directory and move this project before continuing.');
-
-        $io->title("Next Steps");
-        $io->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
-        $io->text('To finish setting up Ballast for the first time and launch this Drupal site, use the following commands:');
-        $io->definitionList([
-          'ahoy harbor' => 'Creates and configures docker containers that are part of our infrastructure. Only needs to be run once.',
-          'ahoy cast-off' => 'Starts the Ballast system. Only needs to be run once after you start up your Mac.',
-          'ahoy rebuild' => 'Pulls a database copy from a remote server.  Uses the aliases set in `drush/sites`',
-        ]);
         break;
 
       case 'Linux':
         if (!$this->getLinuxReadiness($io)) {
           return;
         }
-        $this->setPrecommitHooks($io);
-        $this->setAhoyCommands($io, 'linux');
-        $boot_task = $this->setProxyContainer($io);
-        $result = $boot_task->run();
-        if ($result instanceof Result && $result->wasSuccessful()) {
-          $io->success('Proxy container is setup.');
-          return TRUE;
-        }
-        else {
-          $io->error('Could not setup your http-proxy container.');
-          $io->note([
-            'Check that the docker system is set to run as service',
-            'You may find information on the man page, `man dockerd`',
-            'or use a search engine to search for your',
-            'linux distro name + `dockerd`',
-          ]);
-        }
-        $io->title("Next Steps");
-        $io->text('We will be using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
-        $io->text('For example, `ahoy launch` will bring up the site for this project.');
         break;
 
       default:
         $io->error("Unable to determine your operating system.  Manual installation will be required.");
-        return;
     }
   }
 
   /**
-   * Copy values from the config.yml and move drupal settings files into place.
+   * Use this command to setup a newly cloned Ballast project.
    */
-  public function setupDrupal(SymfonyStyle $io) {
+  public function setupCloned(SymfonyStyle $io) {
+    $this->setConfig();
+    if (
+      file_exists($this->config->getProjectRoot() . Config::PATH)
+      && !$io->confirm('This project has been setup already.  Setup again?')
+    ) {
+      return;
+    }
+    $config = [
+      'jira_project_key' => NULL,
+    ];
+    $type = $io->choice(
+      'What type of project will this be?',
+      ['drupal8', 'drupal9', 'wordpress'],
+      'drupal9'
+    );
+    $docroot = $io->ask('What is the name of your docroot directory?', 'docroot');
+    $domain = $io->ask('What local domain would you like to use?');
+    if ($type !== 'wordpress') {
+      $this->setDrupalSettings($io);
+      $config['site_alias_name'] = $io->ask('What is the root name for your drush aliases?');
+      $config['site_theme_name'] = $io->ask('What is the directory name for your custom theme?');
+      if ($io->confirm("Does your custom theme live in $docroot/themes/custom?")) {
+        $config['site_theme_path'] = "/var/www/$docroot/themes/custom";
+      }
+      else {
+        $path = $io->ask('What is the path from the project root to the folder that contains your theme?');
+        $config['site_theme_path'] = "/var/www/$path";
+      }
+      if ($io->confirm('Does your project use Stage File Proxy?')) {
+        $config['site_proxy_origin_url'] = $io->ask('What is the url to the file origin site?');
+      }
+    }
+    if ($io->confirm('Does your project have a JIRA issue key?')) {
+      $config['jira_project_key'] = $io->ask('What is the JIRA issue key?');
+    }
+    if ($this->taskWriteToFile($this->config->getProjectRoot() . Config::PATH)
+      ->text(Yaml::dump($config))
+      ->run()->wasSuccessful()) {
+      $io->success('Ballast config initialized.');
+    }
+    else {
+      $io->error('Ballast config failed to initialize.');
+    }
+    // Now run the setup.
+    $ddev_config = "ddev config --project-type=$type --docroot=$docroot --project-name=$domain";
+    if ($this->taskExec($ddev_config)->dir($this->config->getProjectRoot())->run()->wasSuccessful()) {
+      // Add the front-end container as an additional service.
+      $this->setFrontEnd($io);
+      if ($io->confirm('Also run setup:project for your own local workflow?')) {
+        $this->setupProject($io);
+      }
+      $io->success('This Ballast project is initialized.');
+      $io->note('If you are using Codeship, check the README.md for additional setup. Otherwise you can commit and share the project.');
+      return;
+    }
+    $io->error('This Ballast project failed to initialize.');
+  }
+
+  /**
+   * Use this command to setup this project before first use.
+   */
+  public function setupProject(SymfonyStyle $io) {
     $this->setConfig();
     // Set some simple variables for string expansion.
     $drupal = $this->config->getDrupalRoot();
     $project = $this->config->getProjectRoot();
-    $collection = $this->collectionBuilder();
-    $collection->addTask(
-      $this->taskFilesystemStack()
-        ->copy("$drupal/sites/default/default.settings.php",
-          "$drupal/sites/default/settings.php")
-    )->rollback(
-      $this->taskFilesystemStack()
-        ->remove("$drupal/sites/default/settings.acquia.php")
-    );
-    $collection->addTask(
-      $this->taskFilesystemStack()
-        ->copy("$project/setup/drupal/settings.acquia.php",
-          "$drupal/sites/default/settings.acquia.php", TRUE)
-    )->rollback(
-      $this->taskFilesystemStack()
-        ->remove("$drupal/sites/default/settings.acquia.php")
-    );
-    $collection->addTask(
-      $this->taskFilesystemStack()
-        ->copy("$project/setup/drupal/settings.non-acquia.php",
-          "$drupal/sites/default/settings.non-acquia.php", TRUE)
-    )->rollback(
-      $this->taskFilesystemStack()
-        ->remove("$drupal/sites/default/settings.non-acquia.php")
-    );
-    $collection->addTask(
+    $this->setPrecommitHooks($io);
+    if ($io->confirm('Create a settings.local.php file?')) {
+      $overwrite = TRUE;
+      if (file_exists("$drupal/sites/default/settings.local.php")) {
+        $overwrite = $io->confirm('Overwrite the existing settings.local.php?', FALSE);
+      }
       $this->taskFilesystemStack()
         ->copy("$project/setup/drupal/settings.local.php",
-          "$drupal/sites/default/settings.local.php", TRUE)
-    )->rollback(
-      $this->taskFilesystemStack()
-        ->remove("$drupal/sites/default/settings.local.php")
-    );
-    $collection->addTask(
-      $this->taskFilesystemStack()
-        ->copy("$project/setup/drupal/services.dev.yml",
-          "$drupal/sites/default/services.dev.yml", TRUE)
-    )->rollback(
-      $this->taskFilesystemStack()
-        ->remove("$drupal/sites/default/services.dev.yml")
-    );
-    $collection->addTask(
-      $this->taskReplaceInFile("$drupal/sites/default/settings.local.php")
-        ->from('{site_shortname}')
-        ->to($this->config->get('site_shortname'))
-    );
-    $collection->addTask(
-      $this->taskReplaceInFile("$drupal/sites/default/settings.local.php")
-        ->from('{site_proxy_origin_url}')
-        ->to($this->config->get('site_proxy_origin_url'))
-    );
-    if (file_exists("$drupal/sites/default/settings.php") &&
-      preg_match(
-        '|/\*\sSettings added by robo setup:drupal|',
-        file_get_contents("$drupal/sites/default/settings.php")
-      )
-    ) {
-      $io->text('Robo settings previously appended to existing settings.php');
+          "$drupal/sites/default/settings.local.php", $overwrite)->run();
+    }
+    $os = php_uname('s');
+    switch ($os) {
+      case 'Linux':
+        $ahoyType = 'linux';
+        break;
+
+      case 'Darwin':
+        $ahoyType = 'mac';
+        break;
+
+    }
+    if ($this->getIsInstalled($io, 'ahoy') && isset($ahoyType)) {
+      $this->ahoyCommands($io, $ahoyType);
+      $io->title("Next Steps");
+      $io->text('We recommend using Ahoy to interact with our toolset from here.  Enter `ahoy -h` to see the full list or check the README.');
     }
     else {
-      $collection->addTask(
-        $this->taskConcat(
-          [
-            "$drupal/sites/default/settings.php",
-            "$project/setup/drupal/settings.append.php",
-          ]
-        )->to("$drupal/sites/default/settings.php")
-      );
+      $io->note("Ahoy not found. If you decide later to use our ahoy commands, install ahoy from https://github.com/ahoy-cli/ahoy and the run `composer robo setup:ahoy-commands $ahoyType`");
     }
-    $result = $collection->run();
-    if ($result instanceof Result && $result->wasSuccessful()) {
-      $this->taskFilesystemStack()->chmod("$drupal/sites/default", 0755)
-        ->run();
-      $this->taskFilesystemStack()
-        ->chmod("$drupal/sites/default/settings.php", 0755)
-        ->run();
-      $io->success('Drupal settings are configured.');
+  }
+
+  /**
+   * Use this command to setup NFS on a Mac.
+   */
+  public function setupNfs(SymfonyStyle $io) {
+    $this->setConfig();
+    $os = php_uname('s');
+    switch ($os) {
+      case 'Linux':
+        $io->note('NFS is not needed on Linux.');
+        break;
+
+      case 'Darwin':
+        $dir = dirname($this->config->getProjectRoot());
+        $folder = $io->ask('What is the path to your docker sites folder?', $dir);
+        $io->text('Running NFS configuration script.');
+        $script = $this->config->getProjectRoot() . "/setup/docker/macos_ddev_nfs_setup.sh $folder";
+        if (!$this->taskExec($script)->run()->wasSuccessful()) {
+          $io->error(
+            'The NFS setup script reported an error.  Run this command again after addressing the errors.'
+          );
+          break;
+        }
+        $io->text('Verify the NFS mount');
+        $this->taskExecStack()
+          ->dir($this->config->getProjectRoot())
+          ->stopOnFail()
+          ->exec('ddev restart')
+          ->exec('ddev debug nfsmount')
+          ->run();
+        if ($io->confirm('Are you satisfied with the verification and ready to enable NFS?')) {
+          $this->taskExecStack()
+            ->dir($this->config->getProjectRoot())
+            ->stopOnFail()
+            ->exec('ddev config global --nfs-mount-enabled')
+            ->exec('ddev restart')
+            ->run();
+        }
+        break;
     }
   }
 
@@ -195,7 +217,7 @@ class SetupCommands extends Tasks {
    * Prep a key to be one line using the php container.
    *
    * @param string $key
-   *   The key.
+   *   The path to a key.
    */
   public function keyPrep(SymfonyStyle $io, $key) {
     $this->setConfig();
@@ -242,6 +264,9 @@ class SetupCommands extends Tasks {
     $ready = FALSE;
     $this->setConfig();
     $io->title('Mac Setup for Ballast');
+    if ($this->getIsInstalled($io, 'docker-machine')) {
+      $io->note('Your system has docker-machine installed.  If you are upgrading from Ballast 2.x or below this check may falsely report readiness. Ballast 3.x uses Docker Desktop which you can install along side docker-machine and run with docker-machine stopped.');
+    }
     $required = $this->getRequirements($io, 'mac');
     if (count($required) > 0) {
       $io->warning('Your Mac is missing required software to use Ballast');
@@ -249,12 +274,12 @@ class SetupCommands extends Tasks {
       $io->listing(array_column($required, 'name'));
       $io->note('You can use homebrew to install each of these:');
       $commands = [];
-      foreach ($required as $package => $settings) {
+      foreach ($required as $settings) {
         $command = '';
         if (!empty($settings['tap'])) {
           $command = 'brew tap ' . $settings['tap'] . '&& ';
         }
-        $command .= 'brew ' . ($settings['cask'] ? 'cask ' : '') . 'install ' . $package;
+        $command .= 'brew install ' . $settings['pkg'];
         $commands[] = $command;
       }
       $io->listing($commands);
@@ -303,12 +328,12 @@ class SetupCommands extends Tasks {
    *
    * @param \Symfony\Component\Console\Style\SymfonyStyle $io
    *   Injected IO object.
-   * @param string $system
-   *   Designates the system.
+   * @param string $os
+   *   Designates the operating system. Valid values are: mac, linux.
    */
-  protected function setAhoyCommands(SymfonyStyle $io, $system) {
+  public function ahoyCommands(SymfonyStyle $io, $os) {
     // Ahoy is installed.
-    $source_path = $this->config->getProjectRoot() . "/setup/ahoy/$system.ahoy.yml";
+    $source_path = $this->config->getProjectRoot() . "/setup/ahoy/$os.ahoy.yml";
     $destination_path = $this->config->getProjectRoot() . '/.ahoy.yml';
     $result = $this->taskFilesystemStack()
       ->copy($source_path, $destination_path)
@@ -321,6 +346,43 @@ class SetupCommands extends Tasks {
       $io->error('Unable to move ahoy.yml file into place.');
       $io->text('Error is:');
       $io->text($result->getMessage());
+      $io->warning("You will need to copy and move this file yourself from $source_path to $destination_path");
+    }
+  }
+
+  /**
+   * Helper method to add the compose file for front-end to ddev.
+   *
+   * @param \Symfony\Component\Console\Style\SymfonyStyle $io
+   *   Injected IO object.
+   */
+  protected function setFrontEnd(SymfonyStyle $io) {
+    $this->setConfig();
+    // Ahoy is installed.
+    $source_path = $this->config->getProjectRoot() . '/setup/docker/docker-compose.front-end-yaml-template';
+    $destination_path = $this->config->getProjectRoot() . '/.ddev/docker-compose.front-end.yaml';
+    $move = $this->taskFilesystemStack()
+      ->copy($source_path, $destination_path)
+      ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
+      ->run()->wasSuccessful();
+    $placeholders = new Collection();
+    $placeholders->add(
+      $this->taskReplaceInFile($destination_path)
+        ->from('{site_theme_name}')
+        ->to($this->config->get('site_theme_name'))
+    );
+    $placeholders->add($this->taskReplaceInFile($destination_path)
+      ->from('{site_theme_path}')
+      ->to($this->config->get('site_theme_path'))
+    );
+    $replace = $placeholders->run()->wasSuccessful();
+    if ($move && $replace) {
+      $io->text('Front end service added to ddev.');
+    }
+    else {
+      $io->error('Unable to move docker-compose.front-end.yaml file into place.');
+      $io->text('Error is:');
+      $io->text($move->getMessage());
       $io->warning("You will need to copy and move this file yourself from $source_path to $destination_path");
     }
   }
@@ -371,9 +433,81 @@ class SetupCommands extends Tasks {
     $result = $collection->run();
     if ($result instanceof Result && $result->wasSuccessful()) {
       $io->success("Hooks for commit-msg and pre-commit linting have been installed.");
+      return TRUE;
     }
     else {
       $io->error("Something went wrong.  Changes have been rolled back.");
+      return FALSE;
+    }
+  }
+
+  /**
+   * Copy our additional drupal settings files into place.
+   */
+  protected function setDrupalSettings(SymfonyStyle $io) {
+    $this->setConfig();
+    // Set some simple variables for string expansion.
+    $drupal = $this->config->getDrupalRoot();
+    $project = $this->config->getProjectRoot();
+    $collection = $this->collectionBuilder();
+    $collection->addTask(
+      $this->taskFilesystemStack()
+        ->copy("$drupal/sites/default/default.settings.php",
+          "$drupal/sites/default/settings.php")
+    )->rollback(
+      $this->taskFilesystemStack()
+        ->remove("$drupal/sites/default/settings.acquia.php")
+    );
+    $collection->addTask(
+      $this->taskFilesystemStack()
+        ->copy("$project/setup/drupal/settings.acquia.php",
+          "$drupal/sites/default/settings.acquia.php", TRUE)
+    )->rollback(
+      $this->taskFilesystemStack()
+        ->remove("$drupal/sites/default/settings.acquia.php")
+    );
+    $collection->addTask(
+      $this->taskFilesystemStack()
+        ->copy("$project/setup/drupal/settings.non-acquia.php",
+          "$drupal/sites/default/settings.non-acquia.php", TRUE)
+    )->rollback(
+      $this->taskFilesystemStack()
+        ->remove("$drupal/sites/default/settings.non-acquia.php")
+    );
+    $collection->addTask(
+      $this->taskFilesystemStack()
+        ->copy("$project/setup/drupal/services.dev.yml",
+          "$drupal/sites/default/services.dev.yml", TRUE)
+    )->rollback(
+      $this->taskFilesystemStack()
+        ->remove("$drupal/sites/default/services.dev.yml")
+    );
+    if (file_exists("$drupal/sites/default/settings.php") &&
+      preg_match(
+        '|/\*\sSettings added by robo setup:project|',
+        file_get_contents("$drupal/sites/default/settings.php")
+      )
+    ) {
+      $io->text('Robo settings previously appended to existing settings.php');
+    }
+    else {
+      $collection->addTask(
+        $this->taskConcat(
+          [
+            "$drupal/sites/default/settings.php",
+            "$project/setup/drupal/settings.append.php",
+          ]
+        )->to("$drupal/sites/default/settings.php")
+      );
+    }
+    $result = $collection->run();
+    if ($result instanceof Result && $result->wasSuccessful()) {
+      $this->taskFilesystemStack()->chmod("$drupal/sites/default", 0755)
+        ->run();
+      $this->taskFilesystemStack()
+        ->chmod("$drupal/sites/default/settings.php", 0755)
+        ->run();
+      $io->success('Drupal settings are configured.');
     }
   }
 
@@ -419,44 +553,34 @@ class SetupCommands extends Tasks {
     switch ($machine) {
       case 'mac':
         $required = [
-          'ahoy' => [
-            'name' => 'Ahoy',
-            'tap' => 'ahoy-cli/tap',
-            'cask' => FALSE,
-          ],
-          'virtualbox' => [
-            'name' => 'virtualbox',
+          'ddev' => [
+            'name' => 'DDEV Local',
             'tap' => '',
-            'cask' => TRUE,
+            'pkg' => 'drud/ddev/ddev',
           ],
           'docker' => [
             'name' => 'Docker',
             'tap' => '',
-            'cask' => FALSE,
+            'pkg' => 'homebrew/cask/docker',
           ],
           'docker-compose' => [
             'name' => 'Docker Compose',
             'tap' => '',
-            'cask' => FALSE,
+            'pkg' => 'homebrew/cask/docker',
           ],
           'pre-commit' => [
             'name' => 'pre-commit by Yelp',
             'tap' => '',
-            'cask' => FALSE,
-          ],
-          'docker-machine-nfs' => [
-            'name' => 'Docker Machine NFS',
-            'tap' => '',
-            'cask' => FALSE,
+            'pkg' => FALSE,
           ],
         ];
         break;
 
       case 'linux':
         $required = [
-          'ahoy' => [
-            'name' => 'Ahoy',
-            'url' => 'https://github.com/ahoy-cli/ahoy',
+          'ddev' => [
+            'name' => 'DDEV Local',
+            'url' => 'https://github.com/drud/ddev',
           ],
           'docker' => [
             'name' => 'Docker',

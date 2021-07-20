@@ -1,0 +1,18 @@
+version: '3.6'
+services:
+  front-end:
+    # Name of container using standard ddev convention
+    container_name: ddev-${DDEV_SITENAME}-front-end
+    labels:
+      # These labels ensure this service is discoverable by ddev
+      com.ddev.site-name: ${DDEV_SITENAME}
+      com.ddev.approot: $DDEV_APPROOT
+    image: digitalpulp/front-end:2.0.4
+    environment:
+      THEME_NAME: {site_theme_name}
+      THEME_PATH: {site_theme_path}
+    depends_on:
+      - web
+    volumes:
+      - ..:/var/www
+    working_dir: {site_theme_path}/{site_theme_name}
