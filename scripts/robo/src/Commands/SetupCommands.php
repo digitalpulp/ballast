@@ -359,7 +359,7 @@ class SetupCommands extends Tasks {
   protected function setFrontEnd(SymfonyStyle $io) {
     $this->setConfig();
     // Ahoy is installed.
-    $source_path = $this->config->getProjectRoot() . '/setup/docker/docker-compose.front-end.yaml';
+    $source_path = $this->config->getProjectRoot() . '/setup/docker/docker-compose.front-end-yaml-template';
     $destination_path = $this->config->getProjectRoot() . '/.ddev/docker-compose.front-end.yaml';
     $move = $this->taskFilesystemStack()
       ->copy($source_path, $destination_path)
