@@ -41,6 +41,7 @@ class RemoteRebuildCommands extends Tasks {
     'no-update' => FALSE,
     'no-compile' => FALSE,
   ]) {
+    $this->setConfig();
     $target = $this->config->get('site_alias_name') . '.' . $environment;
     if ($this->getRemoteDump($io, $target)) {
       $io->text('Remote database dumped.');
@@ -66,6 +67,7 @@ class RemoteRebuildCommands extends Tasks {
    *   The environment suffix for the drush alias.
    */
   public function rebuildPantheon(SymfonyStyle $io, $environment = 'dev') {
+    $this->setConfig();
     $target = $this->config->get('site_alias_name') . '.' . $environment;
     if ($this->getRemotePantheonDump($io, $target)) {
       $io->text('Remote database dumped.');
@@ -98,17 +100,17 @@ class RemoteRebuildCommands extends Tasks {
     $dumpRemote->addTask(
       $this->taskExec("$root/vendor/bin/drush --alias-path='$root/drush/sites' @$target sql-dump --gzip --result-file=/tmp/target.sql")
         ->printMetadata(FALSE)
-        ->printOutput(TRUE)
+        ->printOutput(FALSE)
     );
     $dumpRemote->addTask(
       $this->taskExec("$root/vendor/bin/drush --alias-path='$root/drush/sites' rsync -y @$target:/tmp/target.sql.gz $root/tmp/")
         ->printMetadata(FALSE)
-        ->printOutput(TRUE)
+        ->printOutput(FALSE)
     );
     $dumpRemote->addTask(
       $this->taskExec("gunzip $root/tmp/target.sql.gz -c > $root/target.sql")
         ->printMetadata(FALSE)
-        ->printOutput(TRUE)
+        ->printOutput(FALSE)
     );
     $dumpRemote->addTask(
       $this->taskDeleteDir("$root/tmp/")
@@ -167,7 +169,13 @@ class RemoteRebuildCommands extends Tasks {
     $io->text('Loading remote dump to local database.');
     $loadRemote = $this->collectionBuilder();
     $loadRemote->addTask(
-      $this->taskExec("ddev import-db --src=./target.sql")
+      $this->taskExec("ddev drush -y sql-drop || true")
+        ->printMetadata(FALSE)
+        ->printOutput(FALSE)
+    );
+    $loadRemote->addTask(
+      $this->taskExec("ddev drush sql-sync -y @self @self --no-dump --source-dump=/var/www/html/target.sql")
+
         ->printMetadata(FALSE)
         ->printOutput(FALSE)
     );
@@ -236,7 +244,7 @@ class RemoteRebuildCommands extends Tasks {
   protected function getRebuiltTheme(SymfonyStyle $io) {
     $io->newLine();
     $io->text('Building the theme.');
-    $gulpResult = $this->taskExec("dev exec -s front-end node_modules/.bin/gulp build")
+    $gulpResult = $this->taskExec("ddev exec -s front-end node_modules/.bin/gulp build")
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run();
     if ($gulpResult instanceof Result && $gulpResult->wasSuccessful()) {
