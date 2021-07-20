@@ -167,12 +167,7 @@ class RemoteRebuildCommands extends Tasks {
     $io->text('Loading remote dump to local database.');
     $loadRemote = $this->collectionBuilder();
     $loadRemote->addTask(
-      $this->taskExec("ddev drush -y sql-drop || true")
-        ->printMetadata(FALSE)
-        ->printOutput(FALSE)
-    );
-    $loadRemote->addTask(
-      $this->taskExec("ddev drush sql-sync -y @self @self --no-dump --source-dump=/var/www/target.sql")
+      $this->taskExec("ddev import-db --src=./target.sql")
         ->printMetadata(FALSE)
         ->printOutput(FALSE)
     );

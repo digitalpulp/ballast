@@ -19,7 +19,7 @@ if (isset($_ENV['AH_SITE_ENVIRONMENT'])) {
 }
 // Load settings for local development.
 else {
-  // Load share non-Acquia settings if it exists.
+  // Load ddev settings if it exists.
   $ddev_file_path = __DIR__ . '/settings.ddev.php';
   if (file_exists($ddev_file_path)) {
     require $ddev_file_path;

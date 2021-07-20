@@ -2,6 +2,7 @@
 
 namespace Ballast\Commands;
 
+use Robo\Collection\Collection;
 use Robo\Tasks;
 use Robo\Result;
 use Robo\Contract\VerbosityThresholdInterface;
@@ -96,12 +97,10 @@ class SetupCommands extends Tasks {
       $config['site_alias_name'] = $io->ask('What is the root name for your drush aliases?');
       $config['site_theme_name'] = $io->ask('What is the directory name for your custom theme?');
       if ($io->confirm("Does your custom theme live in $docroot/themes/custom?")) {
-        if ($docroot !== 'docroot') {
-          $config['site_theme_path'] = "/var/www/$docroot/themes/custom";
-        }
+        $config['site_theme_path'] = "/var/www/$docroot/themes/custom";
       }
       else {
-        $path = $io->ask('What is the path from the project root to the folder that contains your theme?', 'web/themes/custom');
+        $path = $io->ask('What is the path from the project root to the folder that contains your theme?');
         $config['site_theme_path'] = "/var/www/$path";
       }
       if ($io->confirm('Does your project use Stage File Proxy?')) {
@@ -366,10 +365,17 @@ class SetupCommands extends Tasks {
       ->copy($source_path, $destination_path)
       ->setVerbosityThreshold(VerbosityThresholdInterface::VERBOSITY_DEBUG)
       ->run()->wasSuccessful();
-    $replace = $this->taskReplaceInFile($destination_path)
-      ->from('{site_theme_name}')
-      ->to($this->config->get('site_theme_name'))
-      ->run()->wasSuccessful();
+    $placeholders = new Collection();
+    $placeholders->add(
+      $this->taskReplaceInFile($destination_path)
+        ->from('{site_theme_name}')
+        ->to($this->config->get('site_theme_name'))
+    );
+    $placeholders->add($this->taskReplaceInFile($destination_path)
+      ->from('{site_theme_path}')
+      ->to($this->config->get('site_theme_path'))
+    );
+    $replace = $placeholders->run()->wasSuccessful();
     if ($move && $replace) {
       $io->text('Front end service added to ddev.');
     }
