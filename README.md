@@ -113,6 +113,9 @@ setup for other members of your team.
 
 ### Run `composer robo setup:cloned`
 An interview and automated setup will run and configure much of the project for you.
+**Note:** Testing shows that Composer 1.x does not support interactive scripts.  If you are still on Composer 1, use
+`php scripts/robo/BallastRunner.php setup:clone` instead.  Ahoy commands will be setup as part of this process if you
+accept the offer to also run `setup:project`, which will enable `ahoy robo` for running other advanced commands.
 
 ### Set a node version in your custom theme.
 The front-end container expects a `.node-version` file in the theme directory. See the [nodenv documentation](https://github.com/nodenv/nodenv#nodenv-local).
