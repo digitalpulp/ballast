@@ -229,16 +229,13 @@ When installing the given `composer.json` some tasks are taken care of:
 * The local machine is checked for dependencies to run the docker
   development setup.  Any missing dependencies are installed
   via homebrew. The following are required for Mac:
-    * Ahoy
-    * VirtualBox
-    * Docker
+    * DDEV Local
+    * Docker Desktop
     * Docker Compose
     * pre-commit by Yelp
-    * Docker Machine NFS
-* A docker based http-proxy & DNS service is created such that any
-  docker container with host name ending in `.site_tld` has traffic routed
-  from the host to the proxy.  No editing of /etc/hosts required for
-  new projects.
+* Strongly suggested but not required:
+    * Ahoy
+
 
 ## Updates and Maintenance
 
