@@ -41,7 +41,7 @@ commands:
     cmd: ddev exec -s exec front-end npm install && docker-compose exec front-end npm shrinkwrap
   compile:
     usage: Compile the site theme assets.
-    cmd: ddev exec -s exec front-end node_modules/.bin/gulp build
+    cmd: ddev exec -s front-end node_modules/.bin/gulp build
   rebuild:
     usage: Sync with a server database and compile front end. Pass an environment argument to use with drush alias [@shortname.env]
     cmd: php scripts/robo/BallastRunner.php rebuild "$@"

@@ -8,14 +8,10 @@
   tag: develop
   service: deploy
   command: composer install --no-dev --no-interaction --optimize-autoloader
-- name: load_dependencies
-  tag: develop
-  service: front-end
-  command: npm ci
 - name: build_frontend
   tag: develop
   service: front-end
-  command: node_modules/.bin/gulp build
+  command: bash /var/www/scripts/deploy/compile-theme.sh
 - name: deploy
   tag: develop
   service: deploy
