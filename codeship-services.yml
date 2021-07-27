@@ -4,7 +4,7 @@ code-quality:
   volumes_from:
     - deploy
 front-end:
-  image: digitalpulp/front-end:2.0-beta.1
+  image: digitalpulp/front-end:2.0.4
   working_dir: /var/www/docroot/themes/custom/YOUR_THEME
   volumes_from:
     - deploy
