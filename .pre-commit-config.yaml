@@ -19,6 +19,8 @@ repos:
     stages: [commit]
     files: \.(php|module|inc|install|profile|theme)$
     args: [--standard=./phpcs.xml]
+  - id: php-stan
+    files: \.(php|module|inc|install|profile|theme)$
 - repo: git://github.com/pre-commit/mirrors-eslint
   rev: v6.8.0
   hooks:

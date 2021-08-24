@@ -15,6 +15,6 @@ $statusCode = \Robo\Robo::run(
   $_SERVER['argv'],
   $commandClasses,
   'Ballast',
-  '3.0-beta'
+  '3.0'
 );
 exit($statusCode);
