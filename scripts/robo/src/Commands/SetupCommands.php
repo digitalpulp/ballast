@@ -150,6 +150,11 @@ class SetupCommands extends Tasks {
       $this->taskFilesystemStack()
         ->copy("$project/setup/drupal/settings.local.php",
           "$drupal/sites/default/settings.local.php", $overwrite)->run();
+      if ($this->config->get('site_proxy_origin_url')) {
+        $this->taskReplaceInFile("$drupal/sites/default/settings.local.php")
+          ->from('{site_proxy_origin_url}')
+          ->to($this->config->get('site_proxy_origin_url'))->run();
+      }
     }
     $os = php_uname('s');
     switch ($os) {
