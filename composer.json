@@ -44,7 +44,6 @@
     },
     "require-dev": {
       "drupal/core-dev": "^9.2.4",
-      "mglaman/phpstan-drupal-deprecations": "^0.11.1",
       "mglaman/phpstan-drupal": "^0.12.12",
       "phpstan/phpstan-deprecation-rules": "^0.12.6"
     },
